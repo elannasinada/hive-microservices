@@ -1,0 +1,44 @@
+#file: noinspection SpringBootApplicationYaml# -> this is for suppressing `config-server configuration` warning
+server:
+  port: 9999
+
+spring:
+  application:
+    name: 2-API-GATEWAY
+---
+
+#config-server configuration
+spring:
+  config:
+    import: optional:${CONFIG_SERVER_URI:http://localhost:9296}/
+---
+
+#api-gateway configuration
+# configuration for gateway has been moved to java class -> GatewayConfig
+#spring:
+#  cloud:
+#    gateway:
+#      routes:
+#        - id: AUTHENTICATION-SERVICE
+#          uri: lb://AUTHENTICATION-SERVICE
+#          predicates:
+#            - Path=/api/v1/auth/**
+#          #intercept requests using filter for jwt
+#          filters:
+#            - AuthenticationFilter
+#            - name: RemoveRequestHeader
+#              args:
+#                name: Authorization
+
+---
+
+spring:
+  main:
+    web-application-type: reactive
+---
+
+#custom-variables
+token:
+  secret:
+    key: "ThisIsSecretForJWTHS512SignatureAlgorithmThatMUSTHave64ByteLength"
+  prefix: "Bearer "

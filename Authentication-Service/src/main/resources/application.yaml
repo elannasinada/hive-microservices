@@ -1,0 +1,42 @@
+#file: noinspection SpringBootApplicationYaml
+# -> this is for suppressing `config-server configuration` warning
+server:
+  port: 8081
+
+spring:
+  application:
+    name: 4-AUTHENTICATION-SERVICE
+---
+
+#config-server configuration
+spring:
+  config:
+    import: optional:${CONFIG_SERVER_URI:http://localhost:9296}/
+---
+
+#custom variables
+token:
+  secret:
+    key: "ThisIsSecretForJWTHS512SignatureAlgorithmThatMUSTHave64ByteLength"
+  prefix: "Bearer "
+
+account:
+  verification:
+    auth:
+      url: "http://localhost:8080/api/auth/accountVerification/"
+---
+
+#mysql-db configuration
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/${DB_AUTHENTICATION_NAME:hive_authentication_service}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:Outlook2@@3}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect

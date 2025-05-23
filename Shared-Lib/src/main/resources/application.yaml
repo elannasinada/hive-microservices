@@ -1,0 +1,12 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: 3-SHARED-LIB
+---
+
+#config-server configuration
+spring:
+  config:
+    import: optional:${CONFIG_SERVER_URI:http://localhost:9296}/

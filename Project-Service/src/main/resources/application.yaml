@@ -1,0 +1,28 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: 5-PROJECT-SERVICE
+---
+
+#config-server configuration
+spring:
+  config:
+    import: optional:${CONFIG_SERVER_URI:http://localhost:9296}/
+---
+
+#mysql-db configuration
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/${DB_AUTHENTICATION_NAME:hive_project_service}
+    username: root
+    password: Outlook2@@3
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
