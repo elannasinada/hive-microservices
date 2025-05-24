@@ -19,7 +19,6 @@ public class DemoController {
         return "PROJECT_LEADER :: this is for testing authentication and authorization";
     }
 
-
     @GetMapping("/pa")
     @PreAuthorize("hasRole('PROJECT_ADMIN')")
     public String demo1() {
