@@ -55,7 +55,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         <div className="p-8 md:p-12">
           <div className="flex items-center space-x-2 mb-8">
             <LayoutIcon size={28} className="text-primary" />
-            <h1 className="text-2xl font-bold text-primary">TaskFlow</h1>
+            <h1 className="text-2xl font-bold text-primary">Hive</h1>
           </div>
           
           <h2 className="text-2xl font-bold text-primary mb-2">
@@ -64,7 +64,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <p className="text-primary/70 mb-8">
             {isLogin 
               ? 'Enter your credentials to access your account' 
-              : 'Fill in the form to get started with TaskFlow'
+              : 'Fill in the form to get started with Hive'
             }
           </p>
           
@@ -175,7 +175,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <div>
             <h2 className="text-2xl font-bold mb-4">Streamline Your Workflow</h2>
             <p className="mb-6">
-              TaskFlow helps teams collaborate effectively, manage projects, and meet deadlines with ease.
+              Hive helps teams collaborate effectively, manage projects, and meet deadlines with ease.
             </p>
             <ul className="space-y-3">
               {[
@@ -195,7 +195,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </div>
           
           <blockquote className="mt-8 border-l-2 border-accent pl-4 italic">
-            "TaskFlow transformed how our team collaborates. We've increased productivity by 35% since implementation."
+            "Hive transformed how our team collaborates. We've increased productivity by 35% since implementation."
             <footer className="mt-2 text-white/80 not-italic">
               - Sarah Chen, Product Manager
             </footer>

@@ -43,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, onLogout }) =
     <div className="h-full flex flex-col text-white">
       <div className="p-4 flex items-center space-x-2">
         <LayoutIcon size={24} className="text-accent" />
-        <h1 className="text-xl font-bold text-white">TaskFlow</h1>
+        <h1 className="text-xl font-bold text-white">Hive</h1>
       </div>
       
       {user && (

@@ -23,8 +23,6 @@
         <module>Task-Service</module>
         <module>Comment-Service</module>
         <module>Authentication-Service</module>
-        <module>Task-Service</module>
-        <module>Config-Server</module>
         <module>Config-Server</module>
         <module>Service-Registry</module>
         <module>API-Gateway</module>
