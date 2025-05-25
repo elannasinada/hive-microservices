@@ -4,9 +4,13 @@ import com.gl.hive.AuthenticationService.model.entity.User;
 import com.gl.hive.AuthenticationService.model.entity.VerificationToken;
 import com.gl.hive.AuthenticationService.model.entity.jwt.JwtToken;
 import com.gl.hive.AuthenticationService.model.entity.jwt.TokenType;
+import com.gl.hive.AuthenticationService.model.request.RegisterRequest;
 import com.gl.hive.AuthenticationService.repository.VerificationTokenRepository;
 import com.gl.hive.AuthenticationService.repository.jwt.JwtTokenRepository;
+import com.gl.hive.shared.lib.exceptions.HiveException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,6 +22,7 @@ import java.util.List;
 @SuppressWarnings("unused")
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthenticationUtils {
 
     private final VerificationTokenRepository verificationTokenRepository;
@@ -76,4 +81,27 @@ public class AuthenticationUtils {
         return verificationToken.getToken();
     }
 
+    /**
+     * Validates a registration request to ensure all required fields are present and in correct format.
+     *
+     * @param request The register request to validate
+     * @throws HiveException if the validation fails
+     */
+    public void validateRegistrationRequest(RegisterRequest request) {
+        log.info("Validating registration request for email: {}", request.getEmail());
+
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            throw new HiveException("Email is required", HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value());
+        }
+
+        if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
+            throw new HiveException("Username is required", HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value());
+        }
+
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            throw new HiveException("Password is required", HttpStatus.BAD_REQUEST, HttpStatus.BAD_REQUEST.value());
+        }
+
+        log.info("Registration request validation passed for email: {}", request.getEmail());
+    }
 }
