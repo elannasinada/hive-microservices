@@ -20,13 +20,14 @@ const queryClient = new QueryClient();
 const AppRoutes = () => {
     const { isAuthenticated } = useAuth();
 
-<<<<<<< HEAD
     return (
         <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/api/v1/auth/accountVerification/:token" element={<Verify />} />            <Route
+            <Route path="/api/v1/auth/accountVerification/:token" element={<Verify />} />
+            <Route path="/verify/:token" element={<Verify />} />
+            <Route
                 path="/dashboard"
                 element={
                     <ProtectedRoute>
@@ -61,54 +62,6 @@ const AppRoutes = () => {
             <Route path="*" element={<NotFound />} />
         </Routes>
     );
-=======
-  return (
-    <Routes>
-      <Route 
-        path="/" 
-        element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
-        } 
-      />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/verify/:token" element={<Verify />} />
-      <Route 
-        path="/dashboard" 
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/team-dashboard" 
-        element={
-          <ProtectedRoute>
-            <TeamDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/admin-dashboard" 
-        element={
-          <ProtectedRoute>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/leader-dashboard" 
-        element={
-          <ProtectedRoute>
-            <LeaderDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
->>>>>>> db92ef90a78805e8d297e7bddbfdbc39908cf247
 };
 
 const App = () => (
