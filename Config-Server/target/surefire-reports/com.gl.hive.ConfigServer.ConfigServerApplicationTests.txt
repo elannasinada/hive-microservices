@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.gl.hive.ConfigServer.ConfigServerApplicationTests
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 23.099 s - in com.gl.hive.ConfigServer.ConfigServerApplicationTests

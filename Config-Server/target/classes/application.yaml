@@ -1,0 +1,30 @@
+server:
+  port: 9296
+
+spring:
+  application:
+    name: 1-CONFIG-SERVER
+  profiles:
+    active: native
+---
+
+#config-server configuration
+spring:
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: file:/config-repo
+---
+
+#eureka-client configuration
+eureka:
+  instance:
+    hostname: localhost
+    prefer-ip-address: true
+    ip-address: 127.0.0.1
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_ADDRESS_URI:http://localhost:8761/eureka}
