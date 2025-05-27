@@ -24,4 +24,8 @@ public class ProjectDTO {
 
     private Long leaderId;
 
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private Integer progress;
+
 }

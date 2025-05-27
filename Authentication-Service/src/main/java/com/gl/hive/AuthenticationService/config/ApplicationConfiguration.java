@@ -41,7 +41,7 @@ public class ApplicationConfiguration {
                     user.getPassword(),
                     user.getRoles() //todo:: remember this mistake and make a note somewhere [not including "ROLE_" leads to forbidden 403]
                             .stream().map(roles ->
-                                    new SimpleGrantedAuthority("ROLE_" + roles.getRole().name())
+                                    new SimpleGrantedAuthority( "ROLE_" + roles.getRole().name())
                             ).toList()
             );
         };

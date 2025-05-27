@@ -153,8 +153,8 @@ const Dashboard: React.FC = () => {
             {projects.slice(0, 3).map((project) => (
               <div key={project.id} className="card hover:shadow-card-hover transition-shadow">
                 <div className="p-5">
-                  <h3 className="text-lg font-semibold text-primary mb-2">{project.name}</h3>
-                  <p className="text-primary/70 text-sm line-clamp-2 mb-4">{project.description}</p>
+                  <h3 className="text-lg font-semibold text-primary mb-2">{project.projectName}</h3>
+                  <p className="text-primary/70 text-sm line-clamp-2 mb-4">{project.projectDescription}</p>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
                       <span className="text-xs px-2 py-1 bg-primary/10 rounded-full text-primary">

@@ -28,7 +28,7 @@ public class TaskAssignmentController {
      *                          </ul>
      * @return a ResponseEntity with an OK HTTP status code and a map of responses for each assigned user
      * @throws ResourceNotFoundException      If the task or project is not found
-     * @throws DevVaultException              If the task does not belong to the project
+     * @throws HiveException              If the task does not belong to the project
      * @throws NotLeaderOfProjectException    If the current user is not a leader or admin of the project
      * @throws ResourceAlreadyExistsException If the task is already assigned to a user
      * @throws NotMemberOfProjectException    If the user is not a member of the project
@@ -37,7 +37,7 @@ public class TaskAssignmentController {
     public ResponseEntity<TaskResponse> assignTaskToUser_s(
             @RequestBody AssignTaskRequest assignTaskRequest
     ) throws
-            ResourceNotFoundException, DevVaultException,
+            ResourceNotFoundException, HiveException,
             NotLeaderOfProjectException, ResourceAlreadyExistsException,
             NotMemberOfProjectException {
         return ResponseEntity.ok(taskService.assignTaskToUser_s(assignTaskRequest));

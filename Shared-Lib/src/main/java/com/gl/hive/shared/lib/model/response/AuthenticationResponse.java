@@ -17,5 +17,6 @@ public class AuthenticationResponse {
     private List<String> roles;
     private List<String> rolesDescription;
     private String token;
+    private boolean active;
 
 }

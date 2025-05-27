@@ -73,9 +73,9 @@ public class ProjectExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
 
-    @ExceptionHandler(DevVaultException.class)
-    public ResponseEntity<ErrorResponse> devVaultExceptionHandler(DevVaultException e) {
-        log.error("❌⭕ DevVaultException triggered - Cause ⭕❌: {{}}", e.getMessage());
+    @ExceptionHandler(HiveException.class)
+    public ResponseEntity<ErrorResponse> hiveExceptionHandler(HiveException e) {
+        log.error("❌⭕ HiveException triggered - Cause ⭕❌: {{}}", e.getMessage());
         e.printStackTrace();
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .errorMessage(e.getMessage())

@@ -8,7 +8,7 @@ import com.gl.hive.ProjectService.model.response.SearchResponse;
 import com.gl.hive.ProjectService.repository.ProjectRepository;
 import com.gl.hive.ProjectService.service.interfaces.SearchProjectService;
 import com.gl.hive.ProjectService.util.ProjectUtilsImpl;
-import com.gl.hive.shared.lib.exceptions.DevVaultException;
+import com.gl.hive.shared.lib.exceptions.HiveException;
 import com.gl.hive.shared.lib.exceptions.ResourceNotFoundException;
 import com.gl.hive.shared.lib.model.dto.CommentDTO;
 import com.gl.hive.shared.lib.model.dto.UserDTO;
@@ -62,7 +62,7 @@ public class SearchProjectServiceImpl implements SearchProjectService {
 
                     } catch (Exception e) {
                         log.error("😖 uh oh... there seems to be an error: {{}} 😖", e.getMessage());
-                        throw new DevVaultException(
+                        throw new HiveException(
                                 e.getMessage(),
                                 BAD_REQUEST,
                                 BAD_REQUEST.value()

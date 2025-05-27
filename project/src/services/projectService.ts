@@ -2,8 +2,8 @@ import { apiClient } from './apiClient';
 
 export type Project = {
   id: string;
-  name: string;
-  description: string;
+  projectName: string;
+  projectDescription: string;
   createdAt: string;
   members: number;
   tasks: number;

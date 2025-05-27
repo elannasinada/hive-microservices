@@ -3,7 +3,7 @@ package com.gl.hive.TaskService.util;
 import com.gl.hive.TaskService.fegin.client.AuthUserFeignClient;
 import com.gl.hive.TaskService.fegin.client.ProjectUtilFeignClient;
 import com.gl.hive.TaskService.model.entity.Task;
-import com.gl.hive.shared.lib.exceptions.DevVaultException;
+import com.gl.hive.shared.lib.exceptions.HiveException;
 import com.gl.hive.shared.lib.exceptions.NotLeaderOfProjectException;
 import com.gl.hive.shared.lib.model.dto.ProjectDTO;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,7 +34,7 @@ public class ProjectTaskValidationUtils {
 
     public void handle_TaskBelongingToProject(Task task, long projectId) {
         if (!task.getProjectId().equals(projectId))
-            throw new DevVaultException("Task with ID '" + task.getTaskId() + "' does not belong to project with ID '" + projectId + "'", BAD_REQUEST, BAD_REQUEST.value());
+            throw new HiveException("Task with ID '" + task.getTaskId() + "' does not belong to project with ID '" + projectId + "'", BAD_REQUEST, BAD_REQUEST.value());
     }
 
 }

@@ -1,6 +1,6 @@
 package com.gl.hive.TaskService.fegin.client;
 
-import com.gl.hive.shared.lib.exceptions.DevVaultException;
+import com.gl.hive.shared.lib.exceptions.HiveException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.Response;
 import feign.codec.ErrorDecoder;
@@ -20,13 +20,13 @@ public class TaskErrorDecoder implements ErrorDecoder {
         log.error("❌ url: {{}} ❌", response.request().url());
         log.error("❌ dst: {{}} ❌", s);
 
-        DevVaultException devVaultException = objectMapper.readValue(
+        HiveException hiveException = objectMapper.readValue(
                 response.body().asInputStream(),
-                DevVaultException.class
+                HiveException.class
         );
-        return new DevVaultException(
-                devVaultException.getMessage(),
-                devVaultException.getHttpStatus(),
+        return new HiveException(
+                hiveException.getMessage(),
+                hiveException.getHttpStatus(),
                 response.status()
         );
     }

@@ -18,13 +18,13 @@ public interface TaskAssignmentService {
      *                          </ul>
      * @return A {@link TaskResponse} containing information about the assigned task and its assigned users
      * @throws ResourceNotFoundException      If the task or project is not found
-     * @throws DevVaultException              If the task does not belong to the project
+     * @throws HiveException              If the task does not belong to the project
      * @throws NotLeaderOfProjectException    If the current user is not a leader or admin of the project
      * @throws ResourceAlreadyExistsException If the task is already assigned to a user
      * @throws NotMemberOfProjectException    If the user is not a member of the project
      */
     TaskResponse assignTaskToUser_s(AssignTaskRequest assignTaskRequest)
-            throws ResourceNotFoundException, DevVaultException, NotLeaderOfProjectException, ResourceAlreadyExistsException, NotMemberOfProjectException;
+            throws ResourceNotFoundException, HiveException, NotLeaderOfProjectException, ResourceAlreadyExistsException, NotMemberOfProjectException;
 
 
     /**

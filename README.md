@@ -1,6 +1,6 @@
-# DevVault - Project Management Spring Boot Application
+# Hive - Project Management Spring Boot Application
 
-Welcome to DevVault, your go-to project management tool powered by Spring Boot! 🚀
+Welcome to Hive, your go-to project management tool powered by Spring Boot! 🚀
 
 ## Table of Contents
 
@@ -15,14 +15,14 @@ Welcome to DevVault, your go-to project management tool powered by Spring Boot! 
 
 ## Introduction
 
-DevVault is a **comprehensive project management application** built using **Spring Boot** and **microservices
+Hive is a **comprehensive project management application** built using **Spring Boot** and **microservices
 architecture**. It provides a **seamless experience** for project leaders and team members to **collaborate effectively
-**. With DevVault, you can register users, create projects, manage project members, create tasks, and assign tasks to
+**. With Hive, you can register users, create projects, manage project members, create tasks, and assign tasks to
 team members.
 
 ## Functionalities
 
-🚀 DevVault offers the following **key functionalities**:
+🚀 Hive offers the following **key functionalities**:
 
 1. **User Registration and Authentication**: Users can register and log in using JWT tokens for **secure access**. ✅
 
@@ -42,7 +42,7 @@ team members.
 
 ## Technologies Used
 
-💻 DevVault leverages several **cutting-edge technologies** and microservices:
+💻 Hive leverages several **cutting-edge technologies** and microservices:
 
 | Technology               | Description                                  |
 |--------------------------|----------------------------------------------|
@@ -56,10 +56,10 @@ team members.
 
 ## Project Structure
 
-🏢 DevVault is organized into microservices, promoting **modularity** and **maintainability**:
+🏢 Hive is organized into microservices, promoting **modularity** and **maintainability**:
 
 ```text
-devvault/
+Hive/
 │
 ├── api-gateway/
 │
@@ -80,7 +80,7 @@ devvault/
 
 ## Security Implementation
 
-🔐 **Security** is a top priority in DevVault. Here's how it works:
+🔐 **Security** is a top priority in Hive. Here's how it works:
 
 1. When a user makes a request, it goes through the **API Gateway filter**. 🚧
 
@@ -90,7 +90,7 @@ devvault/
 
 ## Lessons Learned
 
-🧠 Through the development of DevVault, I've gained valuable insights and expertise, including:
+🧠 Through the development of Hive, I've gained valuable insights and expertise, including:
 
 - Proficiency in **Spring Boot** and **microservices architecture**. 💪
 - Implementation of secure user authentication with **JWT**. 🔐
@@ -99,12 +99,12 @@ devvault/
 
 ## Contributing
 
-🤝 Contributions to DevVault are welcome! If you have suggestions, find issues, or want to contribute, please create a
+🤝 Contributions to Hive are welcome! If you have suggestions, find issues, or want to contribute, please create a
 GitHub issue or submit a pull request. 🙌
 
 ## License
 
-📜 DevVault is open-source and licensed under the [MIT License](LICENSE). Feel free to use, modify, and share it as
+📜 Hive is open-source and licensed under the [MIT License](LICENSE). Feel free to use, modify, and share it as
 needed. 📣
 
-**Happy coding** with DevVault! 🌟👩‍💻👨‍💻
+**Happy coding** with Hive! 🌟👩‍💻👨‍💻

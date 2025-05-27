@@ -15,20 +15,20 @@ spring:
 
 #api-gateway configuration
 # configuration for gateway has been moved to java class -> GatewayConfig
-#spring:
-#  cloud:
-#    gateway:
-#      routes:
-#        - id: AUTHENTICATION-SERVICE
-#          uri: lb://AUTHENTICATION-SERVICE
-#          predicates:
-#            - Path=/api/v1/auth/**
-#          #intercept requests using filter for jwt
-#          filters:
-#            - AuthenticationFilter
-#            - name: RemoveRequestHeader
-#              args:
-#                name: Authorization
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: AUTHENTICATION-SERVICE
+          uri: lb://AUTHENTICATION-SERVICE
+          predicates:
+            - Path=/api/v1/auth/**
+          #intercept requests using filter for jwt
+          filters:
+            - AuthenticationFilter
+            - name: RemoveRequestHeader
+              args:
+                name: Authorization
 
 ---
 

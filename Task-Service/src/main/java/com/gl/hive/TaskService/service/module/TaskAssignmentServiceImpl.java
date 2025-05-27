@@ -62,7 +62,7 @@ public class TaskAssignmentServiceImpl implements TaskAssignmentService {
         Task task = repositoryUtils.find_TaskById_OrElseThrow_ResourceNotFoundException(taskId);
         ProjectDTO projectDTO = repositoryUtils.find_ProjectDTOById_OrElseThrow_ResourceNotFoundException(projectId);
 
-        // 2. Check if the task belongs to the project or throw a DevVaultException
+        // 2. Check if the task belongs to the project or throw a HiveException
         taskValidationUtils.handle_TaskBelongingToProject(task, projectId);
 
         // 3. Check if the current user is leader/admin of the project

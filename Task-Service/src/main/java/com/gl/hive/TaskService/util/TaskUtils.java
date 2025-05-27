@@ -6,7 +6,7 @@ import com.gl.hive.TaskService.model.entity.Task;
 import com.gl.hive.TaskService.model.request.TaskRequest;
 import com.gl.hive.TaskService.model.response.TaskResponse;
 import com.gl.hive.TaskService.repository.TaskRepository;
-import com.gl.hive.shared.lib.exceptions.DevVaultException;
+import com.gl.hive.shared.lib.exceptions.HiveException;
 import com.gl.hive.shared.lib.exceptions.NotLeaderOfProjectException;
 import com.gl.hive.shared.lib.exceptions.NotMemberOfProjectException;
 import com.gl.hive.shared.lib.model.dto.ProjectDTO;
@@ -51,14 +51,14 @@ public class TaskUtils {
      * @param task      the task to validate
      * @param projectId the project to validate against
      * @param userId    the user to validate
-     * @throws DevVaultException           if the task does not belong to the project
+     * @throws HiveException           if the task does not belong to the project
      * @throws NotMemberOfProjectException if the user is not a member of the project
      * @throws NotLeaderOfProjectException if the user is not the leader or admin of the project
      */
     public void validateTaskAndProject(Task task, long projectId, long userId) {
-        // 1. Check if the task belongs to the project or throw a DevVaultException
+        // 1. Check if the task belongs to the project or throw a HiveException
         if (!task.getProjectId().equals(projectId))
-            throw new DevVaultException(
+            throw new HiveException(
                     "😖 Task {" + task.getTaskName() + "} does not belong to project {" + projectId + "} 😖",
                     EXPECTATION_FAILED,
                     EXPECTATION_FAILED.value()

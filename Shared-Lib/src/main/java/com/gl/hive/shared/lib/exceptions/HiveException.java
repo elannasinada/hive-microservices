@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class DevVaultException extends RuntimeException {
+public class HiveException extends RuntimeException {
 
     @JsonProperty("httpStatus")
     private HttpStatus httpStatus;
@@ -15,25 +15,25 @@ public class DevVaultException extends RuntimeException {
     @JsonProperty("statusCode")
     private int statusCode;
 
-    public DevVaultException() {
+    public HiveException() {
     }
 
-    public DevVaultException(String message) {
+    public HiveException(String message) {
         super(message);
     }
 
-    public DevVaultException(String message, int statusCode) {
+    public HiveException(String message, int statusCode) {
         super(message);
         this.statusCode = statusCode;
     }
 
-    public DevVaultException(String message, HttpStatus httpStatus, int statusCode) {
+    public HiveException(String message, HttpStatus httpStatus, int statusCode) {
         super(message);
         this.httpStatus = httpStatus;
         this.statusCode = statusCode;
     }
 
-    public DevVaultException(String message, HttpStatus httpStatus) {
+    public HiveException(String message, HttpStatus httpStatus) {
         super(message);
         this.httpStatus = httpStatus;
     }

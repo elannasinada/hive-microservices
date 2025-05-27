@@ -6,7 +6,7 @@ import com.gl.hive.TaskService.repository.TaskRepository;
 import com.gl.hive.TaskService.service.interfaces.TaskProgressService;
 import com.gl.hive.TaskService.util.RepositoryUtils;
 import com.gl.hive.TaskService.util.TaskUtils;
-import com.gl.hive.shared.lib.exceptions.DevVaultException;
+import com.gl.hive.shared.lib.exceptions.HiveException;
 import com.gl.hive.shared.lib.model.enums.TaskStatus;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +49,7 @@ public class TaskProgressServiceImpl implements TaskProgressService {
 
         // 3. Check if the task has already been completed and throw an exception if it has
         if (task.getTaskStatus().equals(TaskStatus.COMPLETED))
-            throw new DevVaultException(
+            throw new HiveException(
                     "Task has already been completed",
                     BAD_REQUEST,
                     BAD_REQUEST.value()
@@ -63,7 +63,7 @@ public class TaskProgressServiceImpl implements TaskProgressService {
             task.setCompletionDate(LocalDateTime.now());
             taskRepository.saveAndFlush(task);
         } else
-            throw new DevVaultException(
+            throw new HiveException(
                     "TaskStatus should be only as `COMPLETED`",
                     BAD_REQUEST,
                     BAD_REQUEST.value()

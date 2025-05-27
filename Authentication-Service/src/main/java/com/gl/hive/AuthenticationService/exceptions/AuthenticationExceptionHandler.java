@@ -74,7 +74,7 @@ public class AuthenticationExceptionHandler extends ResponseEntityExceptionHandl
 
 
     @ExceptionHandler(HiveException.class)
-    public ResponseEntity<ErrorResponse> devVaultExceptionHandler(HiveException e) {
+    public ResponseEntity<ErrorResponse> hiveExceptionHandler(HiveException e) {
         log.error("❌⭕ HiveException triggered - Cause ⭕❌: {{}}", e.getMessage());
         e.printStackTrace();
         ErrorResponse errorResponse = ErrorResponse.builder()
@@ -156,6 +156,18 @@ public class AuthenticationExceptionHandler extends ResponseEntityExceptionHandl
                 .build();
 
         return new ResponseEntity<>(errorResponse, e.getHttpStatus());
+    }
+
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleAllExceptions(Exception e) {
+        log.error("❌🔥 Unhandled Exception triggered - Cause ❌🔥: {{}}", e.getMessage(), e);
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .errorMessage("Internal server error: " + e.getMessage())
+                .httpStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+                .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .build();
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
 }

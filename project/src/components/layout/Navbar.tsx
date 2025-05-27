@@ -20,6 +20,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, title }) => {
             <button
               onClick={onMenuClick}
               className="text-primary p-2 rounded-md lg:hidden hover:bg-primary/5"
+              title="Open menu"
             >
               <Menu size={24} />
             </button>
@@ -41,6 +42,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, title }) => {
             <button
               onClick={() => setSearchOpen(true)}
               className="md:hidden p-2 text-primary rounded-full hover:bg-primary/5 relative"
+              title="Open search"
             >
               <Search size={20} />
             </button>
@@ -50,6 +52,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, title }) => {
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
                 className="p-2 text-primary rounded-full hover:bg-primary/5 relative"
+                title="Show notifications"
               >
                 <Bell size={20} />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
@@ -118,6 +121,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, title }) => {
             <button 
               onClick={() => setSearchOpen(false)}
               className="p-2 text-primary"
+              title="Close search"
             >
               <X size={24} />
             </button>

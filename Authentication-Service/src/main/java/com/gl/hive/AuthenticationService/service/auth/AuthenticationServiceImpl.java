@@ -185,6 +185,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
         User user = userRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found", NOT_FOUND, NOT_FOUND.value()));
+        if (!user.isActive()) {
+            throw new AuthenticationFailedException(
+                "Account not activated. Please verify your email before logging in.",
+                UNAUTHORIZED,
+                UNAUTHORIZED.value()
+            );
+        }
+        // Log user roles for debugging
+        log.info("User '{}' has roles: {}", user.getEmail(), user.getRoles().stream().map(r -> r.getRole().name()).toList());
         String jwtToken = jwtService.generateToken(user);
 
         // Revoke all the saved tokens for the user and save the generated token
