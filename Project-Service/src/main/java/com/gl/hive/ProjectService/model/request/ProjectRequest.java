@@ -18,5 +18,8 @@ public class ProjectRequest {
     private String projectDescription;
     private LocalDate createdAt;
     private LocalTime creationTime;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private int progress = 0;
 
 }

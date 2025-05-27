@@ -58,6 +58,7 @@ public class SearchProjectServiceImpl implements SearchProjectService {
                                 .leaderName(leaderUserDTO.getUsername())
                                 .members(new ProjectMembersDto(projectUtils.getUserDtoList(project)))
                                 .commentDTOs(commentDTOs)
+                                .progress(project.getProgress())
                                 .build();
 
                     } catch (Exception e) {
@@ -104,6 +105,7 @@ public class SearchProjectServiceImpl implements SearchProjectService {
                                     .leaderName(leaderName)
                                     .members(new ProjectMembersDto(projectUtils.getUserDtoList(project)))
                                     .commentDTOs(commentDTOs)
+                                    .progress(project.getProgress())
                                     .build();
                         }
                 ).toList();

@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
-@FeignClient(name = "7-COMMENT-SERVICE/api/v1/inter-communication/comment", configuration = FeignClientConfiguration.class)
+@FeignClient(name = "7-COMMENT-SERVICE", path = "/api/v1/inter-communication/comment", configuration = FeignClientConfiguration.class)
 public interface CommentFeignClient {
 
     @GetMapping("/get-comments-as-dto-by-project-id/{projectId}")

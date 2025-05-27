@@ -5,7 +5,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@FeignClient(name = "4-AUTHENTICATION-SERVICE/api/v1/inter-communication", configuration = FeignClientConfiguration.class)
+@FeignClient(name = "4-AUTHENTICATION-SERVICE", path = "/api/v1/inter-communication", configuration = FeignClientConfiguration.class)
 public interface AuthUserFeignClient {
 
     @GetMapping("/current-user-dto")

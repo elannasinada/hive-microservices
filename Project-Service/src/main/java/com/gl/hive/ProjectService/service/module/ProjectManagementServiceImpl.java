@@ -100,6 +100,9 @@ public class ProjectManagementServiceImpl implements ProjectManagementService {
 
         project.setLeaderId(leaderId);
         project.incrementMemberCount();
+        project.setStartDate(projectRequest.getStartDate());
+        project.setEndDate(projectRequest.getEndDate());
+        project.setProgress(0);
 
         return project;
     }
@@ -122,6 +125,9 @@ public class ProjectManagementServiceImpl implements ProjectManagementService {
                 .projectDescription(project.getDescription())
                 .createdAt(project.getCreatedAt())
                 .creationTime(project.getCreationTime())
+                .startDate(project.getStartDate())
+                .endDate(project.getEndDate())
+                .progress(project.getProgress())
                 .build();
     }
 

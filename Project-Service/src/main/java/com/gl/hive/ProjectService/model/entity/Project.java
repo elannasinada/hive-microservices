@@ -30,6 +30,11 @@ public class Project {
     private LocalTime creationTime;
     private int memberCount;
 
+    private int progress = 0;
+
+    private LocalDate startDate;
+    private LocalDate endDate;
+
     /* relationships */
     private Long leaderId;
     /* end of relationships */

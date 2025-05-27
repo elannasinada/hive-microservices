@@ -21,5 +21,6 @@ public class SearchResponse {
 
     private ProjectMembersDto members;
     private List<CommentDTO> commentDTOs;
+    private int progress;
 
 }

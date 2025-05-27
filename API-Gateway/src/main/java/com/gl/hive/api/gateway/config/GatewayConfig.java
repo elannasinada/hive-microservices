@@ -26,6 +26,10 @@ public class GatewayConfig {
                         .path("/authenticated/**")
                         .uri("lb://4-AUTHENTICATION-SERVICE")
                 )
+                .route("auth-inter-communication-route", predicateSpec -> predicateSpec
+                        .path("/api/v1/inter-communication/**")
+                        .uri("lb://4-AUTHENTICATION-SERVICE")
+                )
 
                 // PROJECT-SERVICE
                 .route("project-route", predicateSpec -> predicateSpec
