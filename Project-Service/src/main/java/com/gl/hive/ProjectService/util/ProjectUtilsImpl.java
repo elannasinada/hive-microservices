@@ -82,8 +82,6 @@ public class ProjectUtilsImpl implements ProjectUtils {
 
             UserMembersDto userDto = UserMembersDto.builder()
                     .username(memberUserDTO.getUsername())
-                    .major(memberUserDTO.getMajor())
-                    .education(memberUserDTO.getEducation())
                     .role(memberUserDTO.getRoles()
                             .stream().map(roles -> roles.getRole().name()).toList()
                     ).build();

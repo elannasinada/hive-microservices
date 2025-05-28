@@ -33,7 +33,7 @@ public class Task {
     private boolean hasOverdue;
 
     /* relationships */
-    @OneToMany
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TaskUser> assignedUsers = new ArrayList<>();
     private Long createdByUserId;
     private Long projectId;

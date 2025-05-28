@@ -25,18 +25,27 @@ public class User implements UserDetails {
     private String password;
     private String email;
     private boolean active = false;
-    private int age;
-    private String education;
-    private String major;
 
     /* relationships */
+    /* users_roles */
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "users_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
+    @Builder.Default
     private Set<Roles> roles = new HashSet<>();
+
+    /* users_departments */
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "users_departments",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "department_id")
+    )
+    @Builder.Default
+    private Set<Departments> departments = new HashSet<>();
 
     @OneToMany(mappedBy = "user")
     private List<JwtToken> jwtTokens;

@@ -2,6 +2,7 @@ package com.gl.hive.AuthenticationService.service.intercommunication;
 
 import com.gl.hive.AuthenticationService.config.jwt.JwtService;
 import com.gl.hive.AuthenticationService.model.entity.Roles;
+import com.gl.hive.AuthenticationService.model.entity.Departments;
 import com.gl.hive.AuthenticationService.model.entity.User;
 import com.gl.hive.AuthenticationService.repository.RolesRepository;
 import com.gl.hive.AuthenticationService.repository.UserRepository;
@@ -9,6 +10,7 @@ import com.gl.hive.shared.lib.exceptions.AuthenticationFailedException;
 import com.gl.hive.shared.lib.exceptions.MissingAuthenticationHeaderException;
 import com.gl.hive.shared.lib.exceptions.ResourceNotFoundException;
 import com.gl.hive.shared.lib.model.dto.RolesDTO;
+import com.gl.hive.shared.lib.model.dto.DepartmentsDTO;
 import com.gl.hive.shared.lib.model.dto.UserDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -97,16 +99,24 @@ public class UserInterCommunicationService {
             rolesDTO.add(buildRolesDTO);
         }
 
+        Set<DepartmentsDTO> departmentsDTO = new HashSet<>();
+
+        for (Departments departments : user.getDepartments()) {
+            DepartmentsDTO buildDepartmentsDTO = DepartmentsDTO.builder()
+                    .departmentId(departments.getDepartmentId())
+                    .department(departments.getDepartment())
+                    .build();
+
+            departmentsDTO.add(buildDepartmentsDTO);
+        }
+
         return UserDTO.builder()
                 .userId(user.getUserId())
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .password(user.getPassword())
-                .age(user.getAge())
-                .active(user.isActive())
-                .major(user.getMajor())
-                .education(user.getEducation())
                 .roles(rolesDTO)
+                .departments(departmentsDTO)
                 .build();
     }
 

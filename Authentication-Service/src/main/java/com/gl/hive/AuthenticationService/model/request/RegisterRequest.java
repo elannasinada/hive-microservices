@@ -30,8 +30,5 @@ public class RegisterRequest {
             , message = "Pass must be more than 8 characters & must contain a-z, A-Z, 0-9 and special characters.")
     private String password;
     private @Email String email;
-    private @NumberFormat int age;
-    private String education;
-    private String major;
-
+    private String department;
 }

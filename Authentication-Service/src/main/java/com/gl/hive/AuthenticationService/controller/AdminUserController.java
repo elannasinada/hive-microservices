@@ -41,9 +41,7 @@ public class AdminUserController {
                 .map(user -> {
                     user.setUsername(updatedUser.getUsername());
                     user.setEmail(updatedUser.getEmail());
-                    user.setAge(updatedUser.getAge());
-                    user.setEducation(updatedUser.getEducation());
-                    user.setMajor(updatedUser.getMajor());
+                    user.setDepartments(updatedUser.getDepartments());
                     userRepository.save(user);
                     return ResponseEntity.ok(user);
                 })

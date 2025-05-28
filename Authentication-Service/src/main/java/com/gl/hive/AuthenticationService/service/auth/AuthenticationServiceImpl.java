@@ -9,6 +9,8 @@ import com.gl.hive.AuthenticationService.model.request.RegisterRequest;
 import com.gl.hive.AuthenticationService.repository.RolesRepository;
 import com.gl.hive.AuthenticationService.repository.UserRepository;
 import com.gl.hive.AuthenticationService.repository.VerificationTokenRepository;
+import com.gl.hive.AuthenticationService.repository.DepartmentsRepository;
+import com.gl.hive.AuthenticationService.model.entity.Departments;
 import com.gl.hive.AuthenticationService.util.AuthenticationUtils;
 import com.gl.hive.shared.lib.exceptions.AuthenticationFailedException;
 import com.gl.hive.shared.lib.exceptions.HiveException;
@@ -63,6 +65,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final AuthenticationUtils authenticationUtils;
+    private final DepartmentsRepository departmentsRepository;
 
     /**
      * {@inheritDoc}
@@ -95,6 +98,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             User user = modelMapper.map(registerRequest, User.class);
             user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
             user.getRoles().add(teamMemberRole);
+
+            // assign department
+            if (registerRequest.getDepartment() != null && !registerRequest.getDepartment().isEmpty()) {
+                com.gl.hive.shared.lib.model.enums.Department departmentEnum = com.gl.hive.shared.lib.model.enums.Department.valueOf(registerRequest.getDepartment());
+                Departments departmentEntity = departmentsRepository.findByDepartment(departmentEnum)
+                        .orElseThrow(() -> new ResourceNotFoundException("Department not found", NOT_FOUND, NOT_FOUND.value()));
+                user.getDepartments().add(departmentEntity);
+            }
 
             // save the user object to the database
             User savedUser = userRepository.save(user);

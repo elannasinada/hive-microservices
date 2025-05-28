@@ -9,7 +9,12 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "tasks_users")
+@Table(
+    name = "tasks_users",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"task_id"})
+    }
+)
 public class TaskUser {
 
     @Id

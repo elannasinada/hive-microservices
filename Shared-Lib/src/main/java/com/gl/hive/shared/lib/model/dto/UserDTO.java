@@ -20,10 +20,7 @@ public class UserDTO {
     private String password;
     private String email;
     private boolean active = false;
-    private int age;
-    private String education;
-    private String major;
-
+    private Set<DepartmentsDTO> departments = new HashSet<>();
     private Set<RolesDTO> roles = new HashSet<>();
 
 }
