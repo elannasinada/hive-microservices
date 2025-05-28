@@ -3,5 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/project3/hive-welcome-hub" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/project3/hive-welcome-hub/hive-welcome-hub" vcs="Git" />
   </component>
 </project>
