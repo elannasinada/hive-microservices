@@ -9,10 +9,13 @@ import com.gl.hive.TaskService.repository.TaskRepository;
 import com.gl.hive.shared.lib.exceptions.HiveException;
 import com.gl.hive.shared.lib.exceptions.NotLeaderOfProjectException;
 import com.gl.hive.shared.lib.exceptions.NotMemberOfProjectException;
+import com.gl.hive.shared.lib.exceptions.ResourceNotFoundException;
 import com.gl.hive.shared.lib.model.dto.ProjectDTO;
 import com.gl.hive.shared.lib.model.dto.UserDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,6 +34,7 @@ public class TaskUtils {
     private final TaskRepository taskRepository;
     private final AuthUserFeignClient authFeignClient;
     private final ProjectUtilFeignClient projectFeignClient;
+    private static final Logger log = LoggerFactory.getLogger(TaskUtils.class);
 
     /**
      * Checks if a task with the same name already exists in the project
@@ -90,18 +94,38 @@ public class TaskUtils {
      * @return a TaskResponse object with information about the newly created task and updated task.
      */
     public TaskResponse buildTaskResponse(Task task) {
-        ProjectDTO project = projectFeignClient.getProjectAsDTO(task.getProjectId());
+        ProjectDTO project = null;
+        try {
+            project = projectFeignClient.getProjectAsDTO(task.getProjectId());
+        } catch (Exception e) {
+            log.error("Error fetching project details for task " + task.getTaskId(), e);
+            // Project details will be null
+        }
 
         Map<String, String> assignededUsersMap = new HashMap<>();
-        task.getAssignedUsers().forEach(taskUser -> {
-            UserDTO assignedUser = authFeignClient.getUserDTOById(taskUser.getUserId());
-            assignededUsersMap.put(assignedUser.getUserId().toString(), assignedUser.getUsername());
-        });
+        if (task.getAssignedUsers() != null) {
+            task.getAssignedUsers().forEach(taskUser -> {
+                try {
+                    UserDTO assignedUser = authFeignClient.getUserDTOById(taskUser.getUserId());
+                    if (assignedUser != null) {
+                        assignededUsersMap.put(assignedUser.getUserId().toString(), assignedUser.getUsername());
+                    } else {
+                         log.warn("User with ID " + taskUser.getUserId() + " not found for task " + task.getTaskId());
+                    }
+                } catch (ResourceNotFoundException e) {
+                     log.warn("User with ID " + taskUser.getUserId() + " not found (ResourceNotFoundException) for task " + task.getTaskId());
+                     // User details for this specific user will be missing in the map
+                } catch (Exception e) {
+                    log.error("Error fetching user details for task " + task.getTaskId() + " and user " + taskUser.getUserId(), e);
+                    // User details for this specific user will be missing in the map
+                }
+            });
+        }
 
         return TaskResponse.builder()
                 .taskId(task.getTaskId())
                 .taskName(task.getTaskName())
-                .projectName(project.getProjectName())
+                .projectName(project != null ? project.getProjectName() : "N/A") // Use "N/A" if project is null
                 .taskStatus(task.getTaskStatus())
                 .dueDate(task.getDueDate())
                 .assignedUsers(assignededUsersMap)

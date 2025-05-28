@@ -28,4 +28,10 @@ public interface ProjectManagementService {
      */
     ProjectMembersDto listMembersOfProject(Long projectId)
             throws ResourceNotFoundException;
+
+    void addMemberToProject(Long projectId, Long userId);
+    void removeMemberFromProject(Long projectId, Long userId);
+
+    void updateProject(Long projectId, ProjectRequest projectRequest);
+    void deleteProject(Long projectId);
 }

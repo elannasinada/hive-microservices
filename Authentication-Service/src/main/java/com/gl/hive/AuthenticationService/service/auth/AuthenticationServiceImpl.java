@@ -102,7 +102,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             // generate a verification token and send an email with the activation link
             String verificationToken = authenticationUtils.generateVerificationToken(user);
-            String verificationUrl = ACCOUNT_VERIFICATION_AUTH_URL + "/api/v1/auth/accountVerification/" + verificationToken;
+            String verificationUrl = ACCOUNT_VERIFICATION_AUTH_URL + "/verify/" + verificationToken;
             String subject = "Hive Account Verification";
             String htmlMessage = "<div style='font-family: Arial, sans-serif; color: #222;'>" +
                     "<h2>Welcome to Hive!</h2>" +

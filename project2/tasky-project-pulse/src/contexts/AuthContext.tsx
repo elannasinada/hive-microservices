@@ -60,9 +60,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             if (userInfoRes.ok) {
               const userData = await userInfoRes.json();
-              setUser(userData);
+              // Normalize roles and ensure id is set
+              const normalizedRoles = Array.isArray(userData.roles)
+                ? userData.roles.map((r: any) =>
+                    typeof r === 'string'
+                      ? r.replace(/^ROLE_/, '').toUpperCase()
+                      : (r.role ? r.role.replace(/^ROLE_/, '').toUpperCase() : '')
+                  ).filter(Boolean)
+                : [];
+              setUser({
+                id: userData.user_id || userData.id || userData.userId || userData.email || '',
+                username: userData.username,
+                email: userData.email,
+                roles: normalizedRoles,
+                rolesDescription: userData.rolesDescription || [],
+                active: !!userData.active
+              });
             } else {
               setUser(null);
+              setToken(null);
+              localStorage.removeItem('token');
             }
           } else {
             localStorage.removeItem('token');
@@ -77,6 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } else {
         setUser(null);
+        setToken(null);
       }
       setLoading(false);
     };
@@ -89,30 +107,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await authAPI.login({ email, password });
       console.log('Login response data:', data);
       
-      const { token: newToken, username, email: userEmail, roles, rolesDescription, active } = data;
-      if (!active) {
-        toast({
-          title: "Account Not Activated",
-          description: "Please verify your email before logging in.",
-          variant: "destructive"
-        });
-        return { success: false };
-      }
-      setToken(newToken);
-      setUser({
-        id: '',
+      const { token: newToken, username, email: userEmail, roles, rolesDescription, active, user_id } = data;
+      const normalizedRoles = Array.isArray(roles)
+        ? roles.map((r: any) =>
+            typeof r === 'string'
+              ? r.replace(/^ROLE_/, '').toUpperCase()
+              : (r.role ? r.role.replace(/^ROLE_/, '').toUpperCase() : '')
+          ).filter(Boolean)
+        : [];
+      const userObj = {
+        id: user_id || '',
         username,
         email: userEmail,
-        roles,
-        rolesDescription,
-        active
-      });
+        roles: normalizedRoles,
+        rolesDescription: rolesDescription || [],
+        active: !!active
+      };
+      console.log('AuthContext user after login:', userObj);
+      setUser(userObj);
+      setToken(newToken);
       localStorage.setItem('token', newToken);
+      // Fetch user info after login to get user_id and roles
+      try {
+        const userInfoRes = await fetch('http://localhost:9999/api/v1/inter-communication/current-user-dto', {
+          headers: {
+            'Authorization': `Bearer ${newToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (userInfoRes.ok) {
+          const userData = await userInfoRes.json();
+          // Normalize roles and ensure id is set
+          const normalizedRoles = Array.isArray(userData.roles)
+            ? userData.roles.map((r: any) =>
+                typeof r === 'string'
+                  ? r.replace(/^ROLE_/, '').toUpperCase()
+                  : (r.role ? r.role.replace(/^ROLE_/, '').toUpperCase() : '')
+              ).filter(Boolean)
+            : [];
+          setUser({
+            id: userData.user_id || userData.id || userData.userId || userData.email || '',
+            username: userData.username,
+            email: userData.email,
+            roles: normalizedRoles,
+            rolesDescription: userData.rolesDescription || [],
+            active: !!userData.active
+          });
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user info after login:', err);
+        setUser(null);
+      }
       toast({
         title: "Success!",
         description: "You have been logged in successfully."
       });
-      return { success: true, role: roles[0]?.toLowerCase() };
+      return { success: true, role: normalizedRoles[0]?.toUpperCase() };
     } catch (error: any) {
       console.error('Login error:', error);
       let errorMsg = "Login failed. Invalid credentials.";
@@ -159,6 +211,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       title: "Logged Out",
       description: "You have been logged out successfully."
     });
+    window.location.href = '/login';
   };
 
   const value: AuthContextType = {

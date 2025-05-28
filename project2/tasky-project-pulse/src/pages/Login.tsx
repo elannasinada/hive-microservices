@@ -30,24 +30,7 @@ const Login = () => {
     
     const result = await login(email, password);
     if (result.success) {
-      console.log('User role:', result.role);
-      
-      // Map backend roles to frontend routes
-      switch (result.role) {
-        case 'TEAM_MEMBER':
-          navigate('/team-dashboard');
-          break;
-        case 'PROJECT_ADMIN':
-          navigate('/admin-dashboard');
-          break;
-        case 'PROJECT_LEADER':
-          navigate('/leader-dashboard');
-          break;
-        default:
-          // Fallback to general dashboard
-          navigate('/dashboard');
-          break;
-      }
+      navigate('/dashboard');
     }
     
     setLoading(false);

@@ -7,6 +7,7 @@ import com.gl.hive.shared.lib.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import static org.springframework.http.HttpStatus.CREATED;
 
@@ -27,6 +28,7 @@ public class ProjectManagementController {
      * @return a ResponseEntity containing the created project and an HTTP status code of 201 (CREATED)
      */
     @PostMapping("/create-project")
+    @PreAuthorize("hasAnyRole('PROJECT_LEADER', 'ADMIN')")
     public ResponseEntity<ProjectRequest> createProject(@RequestBody ProjectRequest projectRequest) {
         return new ResponseEntity<>(projectManagementService.createProject(projectRequest), CREATED);
     }
@@ -44,6 +46,34 @@ public class ProjectManagementController {
             @PathVariable Long projectId
     ) throws ResourceNotFoundException {
         return ResponseEntity.ok(projectManagementService.listMembersOfProject(projectId));
+    }
+
+    @PostMapping("/{projectId}/add-member/{userId}")
+    @PreAuthorize("hasAnyRole('PROJECT_LEADER', 'ADMIN')")
+    public ResponseEntity<String> addMemberToProject(@PathVariable Long projectId, @PathVariable Long userId) {
+        projectManagementService.addMemberToProject(projectId, userId);
+        return ResponseEntity.ok("User added to project");
+    }
+
+    @DeleteMapping("/{projectId}/remove-member/{userId}")
+    @PreAuthorize("hasAnyRole('PROJECT_LEADER', 'ADMIN')")
+    public ResponseEntity<String> removeMemberFromProject(@PathVariable Long projectId, @PathVariable Long userId) {
+        projectManagementService.removeMemberFromProject(projectId, userId);
+        return ResponseEntity.ok("User removed from project");
+    }
+
+    @PutMapping("/update/{projectId}")
+    @PreAuthorize("hasAnyRole('PROJECT_LEADER', 'ADMIN')")
+    public ResponseEntity<String> updateProject(@PathVariable Long projectId, @RequestBody ProjectRequest projectRequest) {
+        projectManagementService.updateProject(projectId, projectRequest);
+        return ResponseEntity.ok("Project update endpoint called");
+    }
+
+    @DeleteMapping("/delete/{projectId}")
+    @PreAuthorize("hasAnyRole('PROJECT_LEADER', 'ADMIN')")
+    public ResponseEntity<String> deleteProject(@PathVariable Long projectId) {
+        projectManagementService.deleteProject(projectId);
+        return ResponseEntity.ok("Project delete endpoint called");
     }
 
 }

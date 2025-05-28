@@ -20,9 +20,9 @@ public class DemoController {
     }
 
     @GetMapping("/pa")
-    @PreAuthorize("hasRole('PROJECT_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public String demo1() {
-        return "PROJECT_ADMIN :: this is for testing authentication and authorization";
+        return "ADMIN :: this is for testing authentication and authorization";
     }
 
 
@@ -34,9 +34,9 @@ public class DemoController {
 
 
     @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('PROJECT_LEADER', 'PROJECT_ADMIN', 'TEAM_MEMBER')")
+    @PreAuthorize("hasAnyRole('PROJECT_LEADER', 'ADMIN', 'TEAM_MEMBER')")
     public String demo3() {
-        return "'PROJECT_LEADER', 'PROJECT_ADMIN', 'TEAM_MEMBER' :: this is for testing authentication and authorization";
+        return "'PROJECT_LEADER', 'ADMIN', 'TEAM_MEMBER' :: this is for testing authentication and authorization";
     }
 
 }

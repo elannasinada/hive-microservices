@@ -58,7 +58,7 @@ public interface TaskManagementService {
      * @param projectId
      * @param taskId    the ID of the task to delete
      * @throws ResourceNotFoundException   if the task is not found
-     * @throws NotLeaderOfProjectException if the requesting user is not {@link Role#PROJECT_LEADER leader}/{@link Role#PROJECT_ADMIN admin} of the project
+     * @throws NotLeaderOfProjectException if the requesting user is not {@link Role#PROJECT_LEADER leader}/{@link Role#ADMIN admin} of the project
      */
     void deleteTask(long projectId, long taskId)
             throws ResourceNotFoundException, NotLeaderOfProjectException;

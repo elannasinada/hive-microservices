@@ -22,7 +22,9 @@ public interface ProjectMembersRepository extends JpaRepository<ProjectMembers, 
             """)
     List<ProjectMembers> findByProject_ProjectId(Long projectId);
 
-
     Optional<ProjectMembers> findByProject_ProjectNameAndUserId(String projectName, Long userId);
 
+    List<ProjectMembers> findByUserIdAndActiveTrue(Long userId);
+    List<ProjectMembers> findByUserIdAndActiveFalse(Long userId);
+    List<ProjectMembers> findByUserId(Long userId);
 }

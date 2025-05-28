@@ -12,6 +12,9 @@ import ProjectForm from '@/components/ProjectForm';
 import TaskForm from '@/components/TaskForm';
 import ProjectList from '@/components/ProjectList';
 import TaskList from '@/components/TaskList';
+import TeamDashboard from './TeamDashboard';
+import LeaderDashboard from './LeaderDashboard';
+import AdminDashboard from './AdminDashboard';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -26,10 +29,51 @@ const Dashboard = () => {
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeProject, setActiveProject] = useState(null);
+  const [myTasks, setMyTasks] = useState([]);
+  const [dueToday, setDueToday] = useState([]);
+  const [upcomingTasks, setUpcomingTasks] = useState([]);
+  const [completedTasks, setCompletedTasks] = useState([]);
+  const [history, setHistory] = useState([]);
+
+  // Only show New Project and New Task buttons for PROJECT_LEADER or ADMIN
+  const canCreateProjectOrTask = user && (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'));
 
   useEffect(() => {
+    console.log('Dashboard user:', user);
     loadDashboardData();
-  }, []);
+    if (user) {
+      // Fetch active project for user
+      projectAPI.getActiveProjectForUser(user.id)
+        .then(res => {
+          setActiveProject(res);
+        })
+        .catch(err => {
+          setActiveProject(null);
+          toast({ title: 'Error', description: err.message, variant: 'destructive' });
+        });
+      // Fetch tasks assigned to user
+      taskAPI.search({ assignedTo_UserId: user.id })
+        .then(tasks => {
+          setMyTasks(tasks);
+          const today = new Date().toISOString().slice(0, 10);
+          setDueToday(tasks.filter(t => t.dueDate && t.dueDate.slice(0, 10) === today && t.taskStatus !== 'completed'));
+          setUpcomingTasks(tasks.filter(t => t.dueDate && t.dueDate.slice(0, 10) > today && t.taskStatus !== 'completed'));
+          setCompletedTasks(tasks.filter(t => t.taskStatus === 'completed'));
+        })
+        .catch(err => {
+          setMyTasks([]);
+          toast({ title: 'Error', description: err.message, variant: 'destructive' });
+        });
+      // Fetch completed projects
+      projectAPI.getCompletedProjectsForUser(user.id)
+        .then(setHistory)
+        .catch(err => {
+          setHistory([]);
+          toast({ title: 'Error', description: err.message, variant: 'destructive' });
+        });
+    }
+  }, [user]);
 
   const loadDashboardData = async () => {
     try {
@@ -93,138 +137,11 @@ const Dashboard = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-primary">Dashboard</h2>
-              <p className="text-secondary/70 mt-1">Manage your projects and tasks efficiently</p>
-            </div>
-            <Button
-              onClick={() => setShowProjectForm(true)}
-              className="bg-primary hover:bg-secondary text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Project
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="border-accent/20 hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <CheckSquare className="w-6 h-6 text-primary" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-secondary/70">Total Projects</p>
-                  <p className="text-2xl font-bold text-primary">{stats.totalProjects}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-accent/20 hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-accent/20 rounded-lg">
-                  <Calendar className="w-6 h-6 text-secondary" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-secondary/70">Total Tasks</p>
-                  <p className="text-2xl font-bold text-primary">{stats.totalTasks}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-accent/20 hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <CheckSquare className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-secondary/70">Completed</p>
-                  <p className="text-2xl font-bold text-primary">{stats.completedTasks}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-accent/20 hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="w-6 h-6 text-blue-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-secondary/70">Team Members</p>
-                  <p className="text-2xl font-bold text-primary">{stats.teamMembers}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <Tabs defaultValue="projects" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <TabsList className="bg-accent/10">
-              <TabsTrigger value="projects" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                Projects
-              </TabsTrigger>
-              <TabsTrigger value="tasks" className="data-[state=active]:bg-primary data-[state=active]:text-white">
-                Tasks
-              </TabsTrigger>
-            </TabsList>
-            
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowTaskForm(true)}
-                className="border-accent/30 hover:bg-accent/10"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Task
-              </Button>
-            </div>
-          </div>
-
-          <TabsContent value="projects" className="space-y-6">
-            <ProjectList projects={projects} onUpdate={loadDashboardData} />
-          </TabsContent>
-
-          <TabsContent value="tasks" className="space-y-6">
-            <TaskList tasks={tasks} onUpdate={loadDashboardData} />
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Modals */}
-      {showProjectForm && (
-        <ProjectForm
-          onClose={() => setShowProjectForm(false)}
-          onSuccess={handleProjectCreated}
-        />
-      )}
-
-      {showTaskForm && (
-        <TaskForm
-          onClose={() => setShowTaskForm(false)}
-          onSuccess={handleTaskCreated}
-          projects={projects}
-        />
-      )}
-    </div>
-  );
+  if (!user) return null;
+  if (user.roles.includes('ADMIN')) return <AdminDashboard />;
+  if (user.roles.includes('PROJECT_LEADER')) return <LeaderDashboard />;
+  if (user.roles.includes('TEAM_MEMBER')) return <TeamDashboard />;
+  return <div className="min-h-screen flex items-center justify-center"><p className="text-red-500">No valid role assigned. Please contact admin.</p></div>;
 };
 
 export default Dashboard;

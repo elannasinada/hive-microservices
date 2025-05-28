@@ -30,10 +30,9 @@ public interface ProjectUtils {
      * @param userDTO The user to check.
      * @return True if the user is a member of the project, false otherwise.
      * @throws ResourceNotFoundException      If the project cannot be found.
-     * @throws ResourceAlreadyExistsException If the user has already sent a join project request for the project.
      */
     boolean isMemberOfProject(Project project, UserDTO userDTO)
-            throws ResourceNotFoundException, ResourceAlreadyExistsException;
+            throws ResourceNotFoundException;
 
 
     /**

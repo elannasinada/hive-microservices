@@ -1,6 +1,5 @@
 package com.gl.hive.ProjectService.model.dto;
 
-import com.gl.hive.ProjectService.model.enums.JoinStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +17,5 @@ public class UserMembersDto {
     private String major;
     private String education;
     private List<String> role;
-    private JoinStatus joinStatus;
 
 }

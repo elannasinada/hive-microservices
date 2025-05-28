@@ -16,7 +16,7 @@ import java.util.Date;
 
 /**
  * REST controller for marking tasks as completed.
- * Requires the `PROJECT_LEADER` or `PROJECT_ADMIN` role to access.
+ * Requires the `PROJECT_LEADER` or `ADMIN` role to access.
  */
 @RestController
 @RequestMapping("/api/v1/task/progress")

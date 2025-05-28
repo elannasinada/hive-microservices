@@ -69,7 +69,7 @@ export const authAPI = {
 // Demo/Testing API
 export const demoAPI = {
   getProjectLeaders: () => apiRequest('/authenticated/pl'),
-  getProjectAdmins: () => apiRequest('/authenticated/pa'),
+  getAdmins: () => apiRequest('/authenticated/pa'),
   getTeamMembers: () => apiRequest('/authenticated/tm'),
   getAll: () => apiRequest('/authenticated/all'),
 };
@@ -83,10 +83,10 @@ export const projectAPI = {
   listMembers: (projectId: string) => apiRequest(`/api/v1/project/list-members/${projectId}`),
   search: () => apiRequest('/api/v1/search_project'),
   searchByName: (projectName: string) => apiRequest(`/api/v1/search_project/${projectName}`),
-  joinRequest: (projectId: string) => apiRequest(`/api/v1/join_request/${projectId}`, { method: 'POST' }),
-  getJoinRequests: (projectId: string) => apiRequest(`/api/v1/join_request/requests/${projectId}`),
-  approveJoinRequest: (joinRequestId: string) => apiRequest(`/api/v1/join_request/${joinRequestId}/approve`, { method: 'POST' }),
-  rejectJoinRequest: (joinRequestId: string) => apiRequest(`/api/v1/join_request/${joinRequestId}/reject`, { method: 'POST' }),
+  addMember: (projectId: string, userId: string) => apiRequest(`/api/v1/project/${projectId}/add-member/${userId}`, { method: 'POST' }),
+  removeMember: (projectId: string, userId: string) => apiRequest(`/api/v1/project/${projectId}/remove-member/${userId}`, { method: 'DELETE' }),
+  getActiveProjectForUser: (userId: string) => apiRequest(`/api/v1/project/inter-communication/active-project/${userId}`),
+  getCompletedProjectsForUser: (userId: string) => apiRequest(`/api/v1/project/inter-communication/completed-projects/${userId}`),
 };
 
 // Task API

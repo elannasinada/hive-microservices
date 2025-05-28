@@ -77,7 +77,7 @@ public class TaskAssignmentController {
      * @return A {@link MapResponse} object containing the message of the unassigned operation
      * @throws ResourceNotFoundException   If the specified task, project, or user is not found
      * @throws NotLeaderOfProjectException If the user attempting to unassign the task is not
-     *                                     a {@link Role#PROJECT_LEADER leader} or {@link Role#PROJECT_ADMIN admin} of the project
+     *                                     a {@link Role#PROJECT_LEADER leader} or {@link Role#ADMIN admin} of the project
      */
     @DeleteMapping("/unassignTask")
     public ResponseEntity<MapResponse> unassignTaskFromUser_s(

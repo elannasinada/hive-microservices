@@ -38,7 +38,7 @@ public class ProjectInterCommunicationController {
 
 
     /**
-     * Checks whether the provided user is a {@link Role#PROJECT_LEADER} or {@link Role#PROJECT_ADMIN}.
+     * Checks whether the provided user is a {@link Role#PROJECT_LEADER} or {@link Role#ADMIN}.
      *
      * @param projectId the project
      * @param userId    the user
@@ -88,6 +88,18 @@ public class ProjectInterCommunicationController {
     @GetMapping("/validate-project-exists-by-id/{projectId}")
     public boolean validateProjectExists(@PathVariable long projectId) {
         return interCommunicationService.validateProjectExists(projectId);
+    }
+
+    @GetMapping("/active-project/{userId}")
+    public ProjectDTO getActiveProjectForUser(@PathVariable Long userId) {
+        // Implementation will be added in the service
+        return interCommunicationService.getActiveProjectForUser(userId);
+    }
+
+    @GetMapping("/completed-projects/{userId}")
+    public List<ProjectDTO> getCompletedProjectsForUser(@PathVariable Long userId) {
+        // Implementation will be added in the service
+        return interCommunicationService.getCompletedProjectsForUser(userId);
     }
 
 }

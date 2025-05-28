@@ -3,6 +3,7 @@ package com.gl.hive.ProjectService.model.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDateTime;
 
 /**
  * Entity for managing the relationship of members of a Project.
@@ -28,6 +29,10 @@ public class ProjectMembers {
     @JsonIgnore
     private Project project;
     /* end of relationships */
+
+    private boolean active = true;
+    private LocalDateTime assignedAt;
+    private LocalDateTime completedAt;
 
     public ProjectMembers(Long userId, Project project) {
         this.userId = userId;

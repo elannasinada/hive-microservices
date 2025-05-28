@@ -94,7 +94,7 @@ public class TaskManagementController {
      * @param taskId the ID of the task to delete
      * @return a ResponseEntity with an OK HTTP status code
      * @throws ResourceNotFoundException   if the task is not found
-     * @throws NotLeaderOfProjectException if the requesting user is not {@link Role#PROJECT_LEADER leader}/{@link Role#PROJECT_ADMIN admin} of the project
+     * @throws NotLeaderOfProjectException if the requesting user is not {@link Role#PROJECT_LEADER leader}/{@link Role#ADMIN admin} of the project
      */
     @DeleteMapping("/deleteTask/projectId/{projectId}/taskId/{taskId}")
     public ResponseEntity<MapResponse> deleteTask(

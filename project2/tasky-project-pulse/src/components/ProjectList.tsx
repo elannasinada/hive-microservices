@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Calendar, Users, Plus, Search } from 'lucide-react';
-import { projectAPI } from '@/utils/api';
 import { toast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
+import { projectAPI } from '@/utils/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProjectListProps {
   projects: any[];
@@ -14,10 +15,18 @@ interface ProjectListProps {
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [projectTasks, setProjectTasks] = useState<{ [projectId: string]: any[] }>({});
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [showMemberModal, setShowMemberModal] = useState(false);
+  const [members, setMembers] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [memberLoading, setMemberLoading] = useState(false);
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const handleSearch = async () => {
     setSearchLoading(true);
@@ -38,23 +47,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
       });
     } finally {
       setSearchLoading(false);
-    }
-  };
-
-  const handleJoinRequest = async (projectId: string) => {
-    try {
-      await projectAPI.joinRequest(projectId);
-      toast({
-        title: "Success!",
-        description: "Join request sent successfully."
-      });
-    } catch (error) {
-      console.error('Join request failed:', error);
-      toast({
-        title: "Error",
-        description: "Failed to send join request",
-        variant: "destructive"
-      });
     }
   };
 
@@ -80,6 +72,67 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
     };
     if (displayProjects.length > 0) fetchTasksForProjects();
   }, [displayProjects]);
+
+  const fetchMembers = async (projectId: string) => {
+    setMemberLoading(true);
+    setMemberError(null);
+    try {
+      const data = await projectAPI.listMembers(projectId);
+      setMembers(data.projectMembers || []);
+    } catch (err: any) {
+      setMemberError('Failed to load project members');
+    } finally {
+      setMemberLoading(false);
+    }
+  };
+
+  const fetchTeamMembers = async () => {
+    setMemberLoading(true);
+    setMemberError(null);
+    try {
+      const all = await (await import('@/utils/api')).demoAPI.getTeamMembers();
+      setTeamMembers(all || []);
+    } catch (err: any) {
+      setMemberError('Failed to load team members');
+    } finally {
+      setMemberLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showMemberModal && selectedProject) {
+      fetchMembers(selectedProject.projectId);
+      fetchTeamMembers();
+    }
+  }, [showMemberModal, selectedProject]);
+
+  const handleAddMember = async (userId: string) => {
+    setActionLoading(true);
+    try {
+      await projectAPI.addMember(selectedProject.projectId, userId);
+      toast({ title: 'Success', description: 'Member added.' });
+      fetchMembers(selectedProject.projectId);
+      onUpdate();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to add member', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    setActionLoading(true);
+    try {
+      await projectAPI.removeMember(selectedProject.projectId, userId);
+      toast({ title: 'Success', description: 'Member removed.' });
+      fetchMembers(selectedProject.projectId);
+      onUpdate();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to remove member', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -128,6 +181,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
           const startDate = project.startDate || (tasks.length > 0 ? tasks.reduce((min, t) => t.createdAt < min ? t.createdAt : min, tasks[0].createdAt) : null);
           const endDate = project.endDate || (tasks.length > 0 ? tasks.reduce((max, t) => t.dueDate > max ? t.dueDate : max, tasks[0].dueDate) : null);
 
+          const canManageMembers = user && (user.roles.includes('ADMIN') || (user.roles.includes('PROJECT_LEADER') && user.id === project.leaderId));
+
           return (
             <Card key={projectId} className="border-accent/20 hover:shadow-lg transition-shadow">
               <CardHeader>
@@ -163,17 +218,16 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                   <Users className="w-4 h-4 mr-2" />
                   {project.memberCount || 0} members
                 </div>
-                <div className="mt-4 pt-4 border-t border-accent/20">
+                {canManageMembers && (
                   <Button
-                    onClick={() => handleJoinRequest(projectId)}
                     variant="outline"
                     size="sm"
-                    className="w-full border-primary text-primary hover:bg-primary hover:text-white"
+                    className="w-full border-primary text-primary hover:bg-primary hover:text-white mt-2"
+                    onClick={() => { setSelectedProject(project); setShowMemberModal(true); }}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Join Project
+                    Manage Members
                   </Button>
-                </div>
+                )}
               </CardContent>
             </Card>
           );
@@ -191,6 +245,51 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
           <p className="text-secondary/70">
             {searchTerm ? 'Try adjusting your search criteria' : 'Create your first project to get started'}
           </p>
+        </div>
+      )}
+
+      {/* Member Management Modal */}
+      {showMemberModal && selectedProject && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-xl">
+            <h2 className="text-xl font-bold mb-4">Manage Members for {selectedProject.projectName}</h2>
+            {memberLoading ? (
+              <p>Loading...</p>
+            ) : memberError ? (
+              <p className="text-red-500">{memberError}</p>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <h3 className="font-semibold mb-2">Current Members</h3>
+                  <ul className="mb-2">
+                    {members.length === 0 && <li className="text-secondary/60">No members yet.</li>}
+                    {members.map((m) => (
+                      <li key={m.userId} className="flex items-center justify-between py-1">
+                        <span>{m.username} ({m.email})</span>
+                        <Button size="sm" variant="destructive" disabled={actionLoading} onClick={() => handleRemoveMember(m.userId)}>
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">Add TEAM_MEMBER</h3>
+                  <ul>
+                    {teamMembers.filter((tm) => !members.some((m) => m.userId === tm.userId)).map((tm) => (
+                      <li key={tm.userId} className="flex items-center justify-between py-1">
+                        <span>{tm.username} ({tm.email})</span>
+                        <Button size="sm" disabled={actionLoading} onClick={() => handleAddMember(tm.userId)}>
+                          Add
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            )}
+            <Button className="mt-4" onClick={() => setShowMemberModal(false)}>Close</Button>
+          </div>
         </div>
       )}
     </div>

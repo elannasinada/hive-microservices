@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,12 +11,16 @@ import TaskForm from './TaskForm';
 interface TaskListProps {
   tasks: any[];
   onUpdate: () => void;
+  user: any;
 }
 
-const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate }) => {
+const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  // Only allow task management for ADMIN or PROJECT_LEADER
+  const canManageTasks = user && (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'));
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -172,22 +175,26 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate }) => {
               <div className="flex justify-between items-start">
                 <CardTitle className="text-primary text-lg">{task.title}</CardTitle>
                 <div className="flex space-x-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingTask(task)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteTask(task.projectId, task.id)}
-                    className="h-8 w-8 p-0 text-red-600 hover:text-red-800"
-                  >
-                    <Trash className="w-4 h-4" />
-                  </Button>
+                  {canManageTasks && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingTask(task)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteTask(task.projectId, task.id)}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-800"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex space-x-2">
@@ -221,33 +228,37 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate }) => {
               </div>
               
               <div className="mt-4 pt-4 border-t border-accent/20 space-y-2">
-                <div className="flex space-x-1">
-                  <Button
-                    onClick={() => handleUpdateProgress(task.id, task.projectId, 'in-progress')}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 text-xs border-blue-200 text-blue-600 hover:bg-blue-50"
-                  >
-                    Start
-                  </Button>
-                  <Button
-                    onClick={() => handleUpdateProgress(task.id, task.projectId, 'completed')}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 text-xs border-green-200 text-green-600 hover:bg-green-50"
-                  >
-                    Complete
-                  </Button>
-                </div>
-                <Button
-                  onClick={() => handleAssignTask({ taskId: task.id, userId: 'current-user' })}
-                  variant="outline"
-                  size="sm"
-                  className="w-full border-primary text-primary hover:bg-primary hover:text-white"
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  Assign to Me
-                </Button>
+                {canManageTasks && (
+                  <>
+                    <div className="flex space-x-1">
+                      <Button
+                        onClick={() => handleUpdateProgress(task.id, task.projectId, 'in-progress')}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs border-blue-200 text-blue-600 hover:bg-blue-50"
+                      >
+                        Start
+                      </Button>
+                      <Button
+                        onClick={() => handleUpdateProgress(task.id, task.projectId, 'completed')}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs border-green-200 text-green-600 hover:bg-green-50"
+                      >
+                        Complete
+                      </Button>
+                    </div>
+                    <Button
+                      onClick={() => handleAssignTask({ taskId: task.id, userId: 'current-user' })}
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-primary text-primary hover:bg-primary hover:text-white"
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      Assign to Me
+                    </Button>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>

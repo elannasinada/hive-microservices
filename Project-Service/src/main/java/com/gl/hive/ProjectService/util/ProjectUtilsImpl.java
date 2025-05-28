@@ -40,7 +40,7 @@ public class ProjectUtilsImpl implements ProjectUtils {
         // Find the user's role
         RolesDTO leaderOrAdminRole = userDTO.getRoles().stream()
                 .filter(roles ->
-                        roles.getRole().equals(Role.PROJECT_LEADER) || roles.getRole().equals(Role.PROJECT_ADMIN)
+                        roles.getRole().equals(Role.PROJECT_LEADER) || roles.getRole().equals(Role.ADMIN)
                 ).findFirst()
                 .orElseGet(() -> {
                     log.error("😖 Oops... You ({}) are NOT a project `LEADER or ADMIN` 😖", userDTO.getUserId());

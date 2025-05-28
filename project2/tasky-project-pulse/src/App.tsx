@@ -35,30 +35,9 @@ const AppRoutes = () => {
                     </ProtectedRoute>
                 }
             />
-            <Route
-                path="/team-dashboard"
-                element={
-                    <ProtectedRoute>
-                        <TeamDashboard />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/admin-dashboard"
-                element={
-                    <ProtectedRoute>
-                        <AdminDashboard />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/leader-dashboard"
-                element={
-                    <ProtectedRoute>
-                        <LeaderDashboard />
-                    </ProtectedRoute>
-                }
-            />
+            <Route path="/team-dashboard" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/admin-dashboard" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/leader-dashboard" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<NotFound />} />
         </Routes>
     );
