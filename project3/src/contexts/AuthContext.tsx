@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { authAPI } from '@/utils/api';
 
+type Department = 'IT' | 'LOGISTICS' | 'FINANCE' | 'MARKETING' | 'OPERATIONS';
+
 interface User {
   id: string;
   email: string;
@@ -16,7 +18,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<{ success: boolean; role?: string }>;
-  register: (email: string, password: string, username: string, department: 'IT' | 'LOGISTICS' | 'FINANCE' | 'MARKETING' | 'RESEARCH_AND_DEVELOPMENT' | 'OPERATIONS') => Promise<boolean>;
+  register: (email: string, password: string, username: string, department: Department) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -32,9 +34,31 @@ export const useAuth = () => {
   return context;
 };
 
+// Helper function to normalize user data consistently
+const normalizeUserData = (userData: any): User => {
+  // Normalize roles
+  const normalizedRoles = Array.isArray(userData.roles)
+      ? userData.roles.map((r: any) =>
+          typeof r === 'string'
+              ? r.replace(/^ROLE_/, '').toUpperCase()
+              : (r.role ? r.role.replace(/^ROLE_/, '').toUpperCase() : '')
+      ).filter(Boolean)
+      : [];
+
+  return {
+    id: userData.user_id || userData.id || userData.userId || '',
+    username: userData.username || '',
+    email: userData.email || '',
+    roles: normalizedRoles,
+    rolesDescription: userData.rolesDescription || [],
+    active: !!userData.active,
+    profilePicture: userData.profilePicture || undefined
+  };
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
   const API_BASE = 'http://localhost:9999';
@@ -42,31 +66,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initAuth = async () => {
       const storedToken = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
-      
-      if (storedToken && storedUser) {
+      if (storedToken) {
         try {
-          // Verify token is still valid
           const response = await fetch(`${API_BASE}/authenticated/tm`, {
             headers: {
               'Authorization': `Bearer ${storedToken}`,
               'Content-Type': 'application/json'
             }
           });
-          
+
           if (response.ok) {
             setToken(storedToken);
-            setUser(JSON.parse(storedUser));
+            // Fetch user info and set user state
+            const userInfoRes = await fetch(`${API_BASE}/api/v1/inter-communication/current-user-dto`, {
+              headers: {
+                'Authorization': `Bearer ${storedToken}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (userInfoRes.ok) {
+              const userData = await userInfoRes.json();
+              const normalizedUser = normalizeUserData(userData);
+              setUser(normalizedUser);
+            } else {
+              setUser(null);
+              setToken(null);
+              localStorage.removeItem('token');
+            }
           } else {
-            // Token is invalid, clear storage
             localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            setToken(null);
+            setUser(null);
           }
         } catch (error) {
-          console.error('Token verification failed:', error);
+          console.error('Auth verification failed:', error);
           localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
         }
+      } else {
+        setUser(null);
+        setToken(null);
       }
       setLoading(false);
     };
@@ -78,74 +119,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const data = await authAPI.login({ email, password });
       console.log('Login response data:', data);
-      
-      const { token: newToken, username, email: userEmail, roles, rolesDescription, active, user_id } = data;
-      const normalizedRoles = Array.isArray(roles)
-        ? roles.map((r: any) =>
-            typeof r === 'string'
-              ? r.replace(/^ROLE_/, '').toUpperCase()
-              : (r.role ? r.role.replace(/^ROLE_/, '').toUpperCase() : '')
-          ).filter(Boolean)
-        : [];
-      
-      const userObj = {
-        id: user_id || '',
-        username,
-        email: userEmail,
-        roles: normalizedRoles,
-        rolesDescription: rolesDescription || [],
-        active: !!active,
-        profilePicture: data.profilePicture
-      };
-      
-      console.log('AuthContext user after login:', userObj);
-      setUser(userObj);
-      setToken(newToken);
-      
-      // Store in localStorage for persistence
-      localStorage.setItem('token', newToken);
-      localStorage.setItem('user', JSON.stringify(userObj));
-      
-      // Fetch additional user info
-      try {
-        const userInfoRes = await fetch('http://localhost:9999/api/v1/inter-communication/current-user-dto', {
-          headers: {
-            'Authorization': `Bearer ${newToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (userInfoRes.ok) {
-          const userData = await userInfoRes.json();
-          const normalizedRoles = Array.isArray(userData.roles)
-            ? userData.roles.map((r: any) =>
-                typeof r === 'string'
-                  ? r.replace(/^ROLE_/, '').toUpperCase()
-                  : (r.role ? r.role.replace(/^ROLE_/, '').toUpperCase() : '')
-              ).filter(Boolean)
-            : [];
-          
-          const updatedUser = {
-            id: userData.user_id || userData.id || userData.userId || userData.email || '',
-            username: userData.username,
-            email: userData.email,
-            roles: normalizedRoles,
-            rolesDescription: userData.rolesDescription || [],
-            active: !!userData.active,
-            profilePicture: userData.profilePicture
-          };
-          
-          setUser(updatedUser);
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-        }
-      } catch (err) {
-        console.error('Failed to fetch user info after login:', err);
+
+      const newToken = data.token;
+
+      if (!newToken) {
+        throw new Error('No token received from login');
       }
-      
+
+      // Set token first
+      setToken(newToken);
+      localStorage.setItem('token', newToken);
+
+      // Fetch fresh user data from the API
+      const userInfoRes = await fetch(`${API_BASE}/api/v1/inter-communication/current-user-dto`, {
+        headers: {
+          'Authorization': `Bearer ${newToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (userInfoRes.ok) {
+        const userData = await userInfoRes.json();
+        const normalizedUser = normalizeUserData(userData);
+        console.log('User data after login:', normalizedUser);
+        setUser(normalizedUser);
+      } else {
+        console.error('Failed to fetch user info after login');
+        setUser(null);
+        setToken(null);
+        localStorage.removeItem('token');
+        throw new Error('Failed to fetch user information');
+      }
+
       toast({
         title: "Success!",
         description: "You have been logged in successfully."
       });
-      return { success: true, role: normalizedRoles[0]?.toUpperCase() };
+
+      const normalizedRoles = Array.isArray(data.roles)
+          ? data.roles.map((r: any) =>
+              typeof r === 'string'
+                  ? r.replace(/^ROLE_/, '').toUpperCase()
+                  : (r.role ? r.role.replace(/^ROLE_/, '').toUpperCase() : '')
+          ).filter(Boolean)
+          : [];
+
+      return { success: true, role: normalizedRoles[0] };
     } catch (error: any) {
       console.error('Login error:', error);
       let errorMsg = "Login failed. Invalid credentials.";
@@ -161,7 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (email: string, password: string, username: string, department: 'IT' | 'LOGISTICS' | 'FINANCE' | 'MARKETING' | 'RESEARCH_AND_DEVELOPMENT' | 'OPERATIONS'): Promise<boolean> => {
+  const register = async (email: string, password: string, username: string, department: Department): Promise<boolean> => {
     try {
       await authAPI.register({ username, password, email, department });
       toast({
@@ -188,7 +207,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
     toast({
       title: "Logged Out",
       description: "You have been logged out successfully."
@@ -207,8 +225,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+      <AuthContext.Provider value={value}>
+        {children}
+      </AuthContext.Provider>
   );
 };

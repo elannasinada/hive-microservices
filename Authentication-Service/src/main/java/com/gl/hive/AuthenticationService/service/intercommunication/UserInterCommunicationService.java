@@ -40,33 +40,30 @@ public class UserInterCommunicationService {
         Roles projectLeaderRole = get_ProjectLeaderRole();
         User user = getUserById(userId);
 
-        Set<Roles> roles = user.getRoles();
-
-        for (Roles role : roles) {
-            if (!role.getRole().equals(PROJECT_LEADER)) {
-                user.getRoles().add(projectLeaderRole);
-                userRepository.save(user);
-            } else {
-                log.warn("user already has this role - skipping the adding new role process");
-                return;
-            }
+        // Check if user already has the PROJECT_LEADER role
+        if (user.getRoles().contains(projectLeaderRole)) {
+            log.warn("User already has PROJECT_LEADER role - skipping");
+            return;
         }
-    }
 
+        // Add the PROJECT_LEADER role
+        user.getRoles().add(projectLeaderRole);
+        userRepository.save(user);
+        log.info("Successfully added PROJECT_LEADER role to user with ID: {}", userId);
+    }
 
     public Roles get_ProjectLeaderRole() {
         return rolesRepository.findByRole(PROJECT_LEADER)
                 .orElseThrow(() -> {
-                    log.error("😖 huh... it seems we don't have roles with {{}} in our db 😖", PROJECT_LEADER);
+                    log.error("😖 huh... it seems we don't have roles with {} in our db 😖", PROJECT_LEADER);
                     return new ResourceNotFoundException("Roles with the given roleName was not found", NOT_FOUND, NOT_FOUND.value());
                 });
     }
 
-
     public User getUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> {
-                    log.error("😖 huh... it seems we don't have user with {{}} in our db 😖", userId);
+                    log.error("😖 huh... it seems we don't have user with {} in our db 😖", userId);
                     return new ResourceNotFoundException(
                             "😖 User with the given userId was NOT found 😖",
                             NOT_FOUND,
@@ -75,15 +72,13 @@ public class UserInterCommunicationService {
                 });
     }
 
-
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> {
-                    log.error("😖 huh... it seems we don't have user with {{}} in our db 😖", email);
+                    log.error("😖 huh... it seems we don't have user with {} in our db 😖", email);
                     return new ResourceNotFoundException("User with the given email was not found", NOT_FOUND, NOT_FOUND.value());
                 });
     }
-
 
     public UserDTO getUserDTOById(Long userId) {
         User user = getUserById(userId);
@@ -120,7 +115,6 @@ public class UserInterCommunicationService {
                 .build();
     }
 
-
     public UserDTO getCurrentUserAsDTO(String authHeader) {
         if (authHeader == null) {
             log.error("🔐 Authentication header is missing 🔐");
@@ -138,5 +132,4 @@ public class UserInterCommunicationService {
 
         return getUserDTOById(user.getUserId());
     }
-
 }

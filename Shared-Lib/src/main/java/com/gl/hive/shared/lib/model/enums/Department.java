@@ -4,6 +4,5 @@ public enum Department {
     LOGISTICS,
     FINANCE,
     MARKETING,
-    RESEARCH_AND_DEVELOPMENT,
     OPERATIONS
 }

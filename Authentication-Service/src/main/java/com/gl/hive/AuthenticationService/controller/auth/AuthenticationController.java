@@ -10,6 +10,8 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 /**
  * The AuthenticationController class is REST controller that handles the authentication and authorization of users.
@@ -62,6 +64,13 @@ public class AuthenticationController {
     @PostMapping({"/login", "/authenticate"})
     public ResponseEntity<AuthenticationResponse> authenticate(@RequestBody AuthenticationRequest authenticationRequest) {
         return ResponseEntity.ok(authenticationService.authenticate(authenticationRequest));
+    }
+
+    @PostMapping("/profile-picture")
+    public ResponseEntity<String> uploadProfilePicture(@RequestParam("profilePicture") MultipartFile file, @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
+        // The service will handle storage and DB update, returns the URL/path
+        String url = authenticationService.updateProfilePicture(file, principal.getUsername());
+        return ResponseEntity.ok(url);
     }
 
 }

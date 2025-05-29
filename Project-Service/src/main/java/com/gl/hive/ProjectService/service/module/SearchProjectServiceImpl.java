@@ -52,17 +52,17 @@ public class SearchProjectServiceImpl implements SearchProjectService {
             projects = projectRepository.findAll();
         } else if (roles.contains("PROJECT_LEADER")) {
             projects = projectRepository.findAll().stream()
-                .filter(p -> p.getLeaderId() != null && p.getLeaderId().equals(currentUser.getUserId()))
-                .toList();
+                    .filter(p -> p.getLeaderId() != null && p.getLeaderId().equals(currentUser.getUserId()))
+                    .toList();
         } else if (roles.contains("TEAM_MEMBER")) {
             // Find projects where the user is a member
             List<Long> memberProjectIds = projectMembersRepository.findAll().stream()
-                .filter(pm -> pm.getUserId().equals(currentUser.getUserId()))
-                .map(pm -> pm.getProject().getProjectId())
-                .toList();
+                    .filter(pm -> pm.getUserId().equals(currentUser.getUserId()))
+                    .map(pm -> pm.getProject().getProjectId())
+                    .toList();
             projects = projectRepository.findAll().stream()
-                .filter(p -> memberProjectIds.contains(p.getProjectId()))
-                .toList();
+                    .filter(p -> memberProjectIds.contains(p.getProjectId()))
+                    .toList();
         } else {
             projects = List.of();
         }

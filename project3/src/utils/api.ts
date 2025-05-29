@@ -2,7 +2,7 @@ const API_BASE = 'http://localhost:9999';
 
 export const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('token');
-  
+
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
   };
@@ -21,7 +21,7 @@ export const apiRequest = async (endpoint: string, options: RequestInit = {}) =>
 
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, config);
-    
+
     if (!response.ok) {
       let errorMsg = `HTTP error! status: ${response.status}`;
       let errorData = null;
@@ -38,12 +38,12 @@ export const apiRequest = async (endpoint: string, options: RequestInit = {}) =>
       (error as any).data = errorData;
       throw error;
     }
-    
+
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
       return await response.json();
     }
-    
+
     return await response.text();
   } catch (error) {
     console.error('API request failed:', error);

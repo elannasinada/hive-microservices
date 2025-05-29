@@ -45,40 +45,48 @@ const Dashboard = () => {
     if (user) {
       // Fetch active project for user
       projectAPI.getActiveProjectForUser(user.id)
-        .then(res => {
-          setActiveProject(res);
-        })
-        .catch(err => {
-          setActiveProject(null);
-          toast({ title: 'Error', description: err.message, variant: 'destructive' });
-        });
+          .then(res => {
+            setActiveProject(res);
+          })
+          .catch(err => {
+            setActiveProject(null);
+            // Only show toast for server errors, not 404s
+            if (err.status !== 404) {
+              toast({ title: "Error", description: "Could not fetch active project", variant: "destructive" });
+            }
+          });
+
       // Fetch tasks assigned to user
       taskAPI.search({ assignedTo_UserId: user.id })
-        .then(tasks => {
-          setMyTasks(tasks);
-          const today = new Date().toISOString().slice(0, 10);
-          setDueToday(tasks.filter(t => t.dueDate && t.dueDate.slice(0, 10) === today && t.taskStatus !== 'completed'));
-          setUpcomingTasks(tasks.filter(t => t.dueDate && t.dueDate.slice(0, 10) > today && t.taskStatus !== 'completed'));
-          setCompletedTasks(tasks.filter(t => t.taskStatus === 'completed'));
-        })
-        .catch(err => {
-          setMyTasks([]);
-          toast({ title: 'Error', description: err.message, variant: 'destructive' });
-        });
+          .then(tasks => {
+            setMyTasks(tasks);
+            const today = new Date().toISOString().slice(0, 10);
+            setDueToday(tasks.filter(t => t.dueDate && t.dueDate.slice(0, 10) === today && t.taskStatus !== 'completed'));
+            setUpcomingTasks(tasks.filter(t => t.dueDate && t.dueDate.slice(0, 10) > today && t.taskStatus !== 'completed'));
+            setCompletedTasks(tasks.filter(t => t.taskStatus === 'completed'));
+          })
+          .catch(err => {
+            setMyTasks([]);
+            // Only show toast for server errors, not 404s
+            if (err.status !== 404) {
+              toast({ title: "Error", description: "Could not fetch tasks", variant: "destructive" });
+            }
+          });
       // Fetch completed projects
       projectAPI.getCompletedProjectsForUser(user.id)
-        .then(setHistory)
-        .catch(err => {
-          setHistory([]);
-          toast({ title: 'Error', description: err.message, variant: 'destructive' });
-        });
+          .then(setHistory)
+          .catch(err => {
+            console.error("Error fetching completed projects:", err);
+            setHistory([]);
+            toast({ title: 'Error', description: err.message, variant: 'destructive' });
+          });
     }
   }, [user]);
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       // Load demo data to get initial information
       const [projectsData, tasksData, teamData] = await Promise.all([
         projectAPI.search().catch(() => []),
@@ -88,8 +96,8 @@ const Dashboard = () => {
 
       setProjects(projectsData || []);
       setTasks(tasksData || []);
-      
-      // Calculate stats
+
+      // Calculate stats with whatever data we have
       setStats({
         totalProjects: Array.isArray(projectsData) ? projectsData.length : 0,
         totalTasks: Array.isArray(tasksData) ? tasksData.length : 0,
@@ -105,7 +113,7 @@ const Dashboard = () => {
       }
       toast({
         title: "Error",
-        description: errorMsg,
+        description: "Failed to load dashboard data",
         variant: "destructive"
       });
     } finally {
@@ -125,15 +133,15 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-secondary/70">Loading dashboard...</p>
+        <div className="min-h-screen bg-background">
+          <Header />
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-secondary/70">Loading dashboard...</p>
+            </div>
           </div>
         </div>
-      </div>
     );
   }
 

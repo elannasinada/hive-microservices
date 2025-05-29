@@ -17,7 +17,7 @@ spring:
 #custom variables
 token:
   secret:
-    key: "ThisIsSecretForJWTHS512SignatureAlgorithmThatMUSTHave64ByteLength"
+    key: "k9i9rTPqCxyV8mA6nDbM1d1bqAV4j8OZpA6OyUzE1k5f6Hj3i5Ra3kMIEsFuXL9vbnfEQglXqFJopHsA7kqJpQ=="
   prefix: "Bearer "
 
 account:
@@ -51,3 +51,8 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
+
+logging:
+  level:
+    root: WARN
+    org.springframework: WARN

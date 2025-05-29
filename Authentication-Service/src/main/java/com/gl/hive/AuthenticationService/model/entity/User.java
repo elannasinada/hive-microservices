@@ -26,6 +26,11 @@ public class User implements UserDetails {
     private String email;
     private boolean active = false;
 
+    // Profile picture URL or path
+    @Lob
+    @Column(name = "profile_picture", columnDefinition = "LONGBLOB")
+    private byte[] profilePicture;
+
     /* relationships */
     /* users_roles */
     @ManyToMany(fetch = FetchType.EAGER)

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
@@ -76,17 +77,17 @@ public class ProjectInterCommunicationService {
         // Fetch tasks and team members as needed
         // ...
         return ProjectDTO.builder()
-            .projectId(project.getProjectId())
-            .projectName(project.getProjectName())
-            .description(project.getDescription())
-            .createdAt(project.getCreatedAt())
-            .creationTime(project.getCreationTime())
-            .leaderId(project.getLeaderId())
-            .memberCount(project.getMemberCount())
-            .startDate(project.getStartDate())
-            .endDate(project.getEndDate())
-            // Add tasks, team, progress, etc.
-            .build();
+                .projectId(project.getProjectId())
+                .projectName(project.getProjectName())
+                .description(project.getDescription())
+                .createdAt(project.getCreatedAt())
+                .creationTime(project.getCreationTime())
+                .leaderId(project.getLeaderId())
+                .memberCount(project.getMemberCount())
+                .startDate(project.getStartDate())
+                .endDate(project.getEndDate())
+                // Add tasks, team, progress, etc.
+                .build();
     }
 
     public List<ProjectDTO> getCompletedProjectsForUser(Long userId) {
@@ -97,17 +98,17 @@ public class ProjectInterCommunicationService {
             // Fetch tasks, team, metrics as needed
             // ...
             completedProjects.add(ProjectDTO.builder()
-                .projectId(project.getProjectId())
-                .projectName(project.getProjectName())
-                .description(project.getDescription())
-                .createdAt(project.getCreatedAt())
-                .creationTime(project.getCreationTime())
-                .leaderId(project.getLeaderId())
-                .memberCount(project.getMemberCount())
-                .startDate(project.getStartDate())
-                .endDate(project.getEndDate())
-                // Add tasks, team, metrics, etc.
-                .build());
+                    .projectId(project.getProjectId())
+                    .projectName(project.getProjectName())
+                    .description(project.getDescription())
+                    .createdAt(project.getCreatedAt())
+                    .creationTime(project.getCreationTime())
+                    .leaderId(project.getLeaderId())
+                    .memberCount(project.getMemberCount())
+                    .startDate(project.getStartDate())
+                    .endDate(project.getEndDate())
+                    // Add tasks, team, metrics, etc.
+                    .build());
         }
         return completedProjects;
     }

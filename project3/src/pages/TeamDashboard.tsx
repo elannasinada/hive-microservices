@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,18 +25,12 @@ const TeamDashboard = () => {
 
   useEffect(() => {
     if (user) {
-      // Fetch active project
       projectAPI.getActiveProjectForUser(user.id)
-        .then(project => {
-          setActiveProject(project);
-          if (project?.teamMembers) {
-            setTeamMembers(project.teamMembers);
-          }
-        })
-        .catch(err => {
-          setActiveProject(null);
-          console.error('Active project fetch failed:', err);
-        });
+          .then(setActiveProject)
+          .catch(err => {
+            setActiveProject(null);
+            console.error('Active project fetch failed:', err);
+          });
 
       // Fetch tasks
       taskAPI.search({ assignedTo_UserId: user.id })
@@ -62,12 +55,12 @@ const TeamDashboard = () => {
   const filteredTasks = myTasks.filter(task => {
     const matchesSearch = task.taskName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          task.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     if (selectedFilter === 'all') return matchesSearch;
     if (selectedFilter === 'due-today') return dueToday.includes(task) && matchesSearch;
     if (selectedFilter === 'upcoming') return upcomingTasks.includes(task) && matchesSearch;
     if (selectedFilter === 'completed') return completedTasks.includes(task) && matchesSearch;
-    
+
     return matchesSearch;
   });
 
@@ -98,9 +91,9 @@ const TeamDashboard = () => {
             {task.priority || 'Medium'}
           </Badge>
         </div>
-        
+
         <p className="text-sm text-secondary/70 mb-3 line-clamp-2">{task.description}</p>
-        
+
         <div className="flex items-center justify-between mb-3">
           <Badge className={getStatusColor(task.taskStatus)}>
             {task.taskStatus?.replace('_', ' ') || 'To Do'}
@@ -133,17 +126,17 @@ const TeamDashboard = () => {
             {(member.username || member.email)?.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-        
+
         <h3 className="font-semibold text-primary mb-1">{member.username || member.email}</h3>
         <Badge variant="outline" className="text-xs mb-2">
           {member.role || 'Team Member'}
         </Badge>
-        
+
         <div className="flex items-center justify-center space-x-1 mb-2">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
           <span className="text-xs text-secondary/60">Available</span>
         </div>
-        
+
         <p className="text-xs text-secondary/60">2 active tasks</p>
       </CardContent>
     </Card>
@@ -152,7 +145,7 @@ const TeamDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Section */}
         <div className="mb-8">
@@ -161,7 +154,7 @@ const TeamDashboard = () => {
               <h2 className="text-3xl font-bold text-primary">Team Dashboard</h2>
               <p className="text-secondary/70 mt-1">Manage your tasks and collaborate with your team</p>
             </div>
-            
+
             {/* Search and Filters */}
             <div className="flex flex-col sm:flex-row gap-3 mt-4 lg:mt-0">
               <div className="relative">
@@ -173,11 +166,12 @@ const TeamDashboard = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              
+
               <select
                 className="px-3 py-2 border border-accent/20 rounded-md text-sm bg-background"
                 value={selectedFilter}
                 onChange={(e) => setSelectedFilter(e.target.value)}
+                title="Select task filter"
               >
                 <option value="all">All Tasks</option>
                 <option value="due-today">Due Today</option>
@@ -283,7 +277,7 @@ const TeamDashboard = () => {
                       </div>
                       <Badge className="bg-green-100 text-green-800">Active</Badge>
                     </div>
-                    
+
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-secondary/70">Project Progress</span>

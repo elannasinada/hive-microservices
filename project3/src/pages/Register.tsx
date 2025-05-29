@@ -12,7 +12,6 @@ const DEPARTMENTS = [
   'LOGISTICS',
   'FINANCE',
   'MARKETING',
-  'RESEARCH_AND_DEVELOPMENT',
   'OPERATIONS',
 ] as const;
 

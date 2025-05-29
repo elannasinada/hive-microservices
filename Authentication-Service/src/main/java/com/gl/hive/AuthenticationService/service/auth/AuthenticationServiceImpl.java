@@ -34,6 +34,12 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.web.multipart.MultipartFile;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.io.IOException;
 
 import java.util.List;
 import java.util.Optional;
@@ -245,6 +251,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("❌❌❌ User with email: '" + email + "' not found! ❌❌❌", NOT_FOUND, 404)
                 ).getUserId();
+    }
+
+    @Override
+    public String updateProfilePicture(MultipartFile file, String email) {
+        Optional<User> userOptional = userRepository.findByEmail(email);
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            try {
+                user.setProfilePicture(file.getBytes());
+                userRepository.save(user);
+                return "Profile picture updated successfully";
+            } catch (IOException e) {
+                log.error("Error processing profile picture upload for user {}: {}", email, e.getMessage());
+                throw new HiveException("Failed to process profile picture upload", INTERNAL_SERVER_ERROR, INTERNAL_SERVER_ERROR.value());
+            }
+        } else {
+            throw new ResourceNotFoundException("User not found", NOT_FOUND, NOT_FOUND.value());
+        }
     }
 
 }

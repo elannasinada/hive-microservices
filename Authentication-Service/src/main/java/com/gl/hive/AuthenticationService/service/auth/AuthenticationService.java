@@ -6,6 +6,7 @@ import com.gl.hive.shared.lib.exceptions.AuthenticationFailedException;
 import com.gl.hive.shared.lib.exceptions.ResourceAlreadyExistsException;
 import com.gl.hive.shared.lib.exceptions.ResourceNotFoundException;
 import com.gl.hive.shared.lib.model.response.AuthenticationResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Service class for authenticating and registering user.
@@ -54,5 +55,8 @@ public interface AuthenticationService {
      */
     Long getCurrentUser()
             throws AuthenticationFailedException;
+
+    // Add this for profile picture update
+    String updateProfilePicture(MultipartFile file, String email);
 
 }

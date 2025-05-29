@@ -90,7 +90,7 @@ const Header = () => {
                                 {/* Notifications */}
                                 <Notifications />
 
-                                {/* Profile Menu */}
+                                {/* Profile Menu (now opens dialog directly) */}
                                 <ProfileMenu />
 
                                 <Button

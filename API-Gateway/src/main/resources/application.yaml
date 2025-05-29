@@ -40,5 +40,67 @@ spring:
 #custom-variables
 token:
   secret:
-    key: "ThisIsSecretForJWTHS512SignatureAlgorithmThatMUSTHave64ByteLength"
+    key: "k9i9rTPqCxyV8mA6nDbM1d1bqAV4j8OZpA6OyUzE1k5f6Hj3i5Ra3kMIEsFuXL9vbnfEQglXqFJopHsA7kqJpQ=="
   prefix: "Bearer "
+
+spring:
+  application:
+    name: API-Gateway
+  cloud:
+    gateway:
+      discovery.locator:
+        enabled: true
+        lower-case-service-id: true
+      routes:
+        - id: authentication-service
+          uri: lb://4-AUTHENTICATION-SERVICE
+          predicates:
+            - Path=/api/v1/auth/**, /authenticated/**
+          filters:
+            - AuthenticationFilter
+        - id: project-service
+          uri: lb://5-PROJECT-SERVICE
+          predicates:
+            - Path=/api/v1/project/**, /api/v1/search_project/**
+          filters:
+            - AuthenticationFilter
+        - id: task-service
+          uri: lb://6-TASK-SERVICE
+          predicates:
+            - Path=/api/v1/task/**
+          filters:
+            - AuthenticationFilter
+        - id: comment-service
+          uri: lb://7-COMMENT-SERVICE
+          predicates:
+            - Path=/api/v1/comment/**
+          filters:
+            - AuthenticationFilter
+        - id: config-server
+          uri: lb://2-CONFIG-SERVER
+          predicates:
+            - Path=/api/v1/config/**
+          filters:
+            - AuthenticationFilter
+        - id: service-registry
+          uri: lb://3-SERVICE-REGISTRY
+          predicates:
+            - Path=/eureka/**
+          filters:
+            - AuthenticationFilter
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+  instance:
+    hostname: localhost
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: TRACE
+    org.springframework.security: DEBUG # Set to DEBUG to see security-related logs
+    org.springframework.web.reactive: DEBUG
+    reactor.netty: DEBUG
+    com.gl.hive: DEBUG

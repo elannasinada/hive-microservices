@@ -1,9 +1,12 @@
 package com.gl.hive.shared.lib.exceptions;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.http.HttpStatus;
+
+@JsonIgnoreProperties(ignoreUnknown = true) // Optional if you add all fields
 
 @Data
 @EqualsAndHashCode(callSuper = true)
