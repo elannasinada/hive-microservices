@@ -51,7 +51,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     { id: 'overdue', title: 'Overdue', count: tasks.filter(t => t.taskStatus === 'OVERDUE' || isTaskOverdue(t)).length },
     { id: 'to-do', title: 'To Do', count: tasks.filter(t => t.taskStatus === 'TO_DO' && !isTaskOverdue(t)).length },
     { id: 'in-progress', title: 'In Progress', count: tasks.filter(t => t.taskStatus === 'IN_PROGRESS' && !isTaskOverdue(t)).length },
-    { id: 'completed', title: 'Completed', count: tasks.filter(t => t.taskStatus === 'COMPLETED').length }
+    { id: 'completed', title: 'Completed', count: tasks.filter(t => t.taskStatus === 'COMPLETED').length },
+    { id: 'cancelled', title: 'Cancelled', count: tasks.filter(t => t.taskStatus === 'CANCELLED').length }
+
   ];
 
   const getPriorityColor = (priority: string) => {
@@ -69,6 +71,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       case 'to-do': return 'bg-purple-500';
       case 'completed': return 'bg-green-500';
       case 'in-progress': return 'bg-blue-500';
+      case 'cancelled': return 'bg-gray-500';
       default: return 'bg-gray-400';
     }
   };

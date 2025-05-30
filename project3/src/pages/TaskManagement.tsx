@@ -291,6 +291,7 @@ const TaskManagement = () => {
     const inProgressTasks = filterTasksByCategory(filteredTasks, 'in-progress').length;
     const overdueTasks = filterTasksByCategory(filteredTasks, 'overdue').length;
     const dueTodayTasks = filterTasksByCategory(filteredTasks, 'due-today').length;
+    const cancelledTasks = filterTasksByCategory(filteredTasks, 'cancelled').length;
 
     return { 
       totalTasks, 
@@ -298,7 +299,8 @@ const TaskManagement = () => {
       completedTasks, 
       inProgressTasks, 
       overdueTasks,
-      dueTodayTasks 
+      dueTodayTasks,
+      cancelledTasks
     };
   };
 
@@ -345,7 +347,7 @@ const TaskManagement = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
             <Card className="border-accent/20">
               <CardContent className="p-4">
                 <div className="text-center">
@@ -375,6 +377,22 @@ const TaskManagement = () => {
                 <div className="text-center">
                   <p className="text-2xl font-bold text-green-600">{stats.completedTasks}</p>
                   <p className="text-xs text-secondary/70">Completed</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-accent/20">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">{stats.toDoTasks}</p>
+                  <p className="text-xs text-secondary/70">To Do Tasks</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-accent/20">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-600">{stats.cancelledTasks}</p>
+                  <p className="text-xs text-secondary/70">Cancelled Tasks</p>
                 </div>
               </CardContent>
             </Card>
@@ -419,7 +437,7 @@ const TaskManagement = () => {
                   </SelectContent>
                 </Select>
 
-                <Select value={projectFilter} onValueChange={setProjectFilter}>
+                {/* <Select value={projectFilter} onValueChange={setProjectFilter}>
                   <SelectTrigger className="w-full md:w-40">
                     <SelectValue placeholder="All Projects" />
                   </SelectTrigger>
@@ -431,7 +449,7 @@ const TaskManagement = () => {
                       </SelectItem>
                     ))}
                   </SelectContent>
-                </Select>
+                </Select> */}
               </div>
             </CardContent>
           </Card>

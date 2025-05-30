@@ -44,35 +44,25 @@ const TaskListView: React.FC<TaskListViewProps> = ({
   const getPriorityColor = (priority: string) => {
     switch (priority?.toLowerCase()) {
       case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
+      case 'medium': return 'bg-green-100 text-green-800 border-green-200';
+      case 'low': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };  const getStatusColor = (status: string) => {
-    const statusLower = status?.toLowerCase() || '';
-    
-    // Handle TO_DO tasks
-    if (statusLower === 'to-do' || statusLower === 'to_do' || statusLower === 'todo') {
-      return 'bg-purple-100 text-purple-800 border-purple-200';
+    switch (status) {
+      case 'TO_DO':
+        return 'bg-purple-100 text-purple-800';
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-800';
+      case 'IN_PROGRESS':
+        return 'bg-blue-100 text-blue-800';
+      case 'OVERDUE':
+        return 'bg-red-100 text-red-800';
+      case 'CANCELLED':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
-    
-    // Handle overdue tasks
-    if (statusLower === 'overdue') {
-      return 'bg-red-100 text-red-800 border-red-200';
-    }
-    
-    // Handle completed tasks
-    if (statusLower === 'completed' || statusLower === 'complete' || statusLower === 'completed_task') {
-      return 'bg-green-100 text-green-800 border-green-200';
-    }
-    
-    // Handle in-progress tasks
-    if (statusLower === 'in-progress' || statusLower === 'in_progress' || statusLower === 'inprogress') {
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    }
-    
-    // Default case
-    return 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
   const handleSort = (field: string) => {
@@ -111,7 +101,7 @@ const TaskListView: React.FC<TaskListViewProps> = ({
 
   const getProjectName = (projectId: string) => {
     const project = projects.find(p => p.id === projectId);
-    return project?.name || project?.title || 'Unknown Project';
+    return project?.projectName || project?.title || 'Unknown Project';
   };
 
   const SortableHeader = ({ field, children }: { field: string; children: React.ReactNode }) => (
@@ -142,7 +132,6 @@ const TaskListView: React.FC<TaskListViewProps> = ({
                 <SortableHeader field="title">Task</SortableHeader>
                 <SortableHeader field="priority">Priority</SortableHeader>
                 <SortableHeader field="status">Status</SortableHeader>
-                <SortableHeader field="projectId">Project</SortableHeader>
                 <SortableHeader field="dueDate">Due Date</SortableHeader>
                 <TableHead>Assignees</TableHead>
                 <TableHead>Actions</TableHead>
@@ -152,17 +141,30 @@ const TaskListView: React.FC<TaskListViewProps> = ({
               {sortedTasks.map((task) => {
                 const overdue = isOverdue(task.dueDate);
                 
+                // Determine the status to display
+                let displayStatus = task.taskStatus;
+                let statusColorClass = getStatusColor(task.taskStatus);
+                let isActuallyOverdue = false;
+
+                if (task.taskStatus !== 'COMPLETED' && task.taskStatus !== 'CANCELLED' && overdue) {
+                    displayStatus = 'OVERDUE';
+                    statusColorClass = getStatusColor('OVERDUE'); // Use the overdue color
+                    isActuallyOverdue = true;
+                }
+
                 return (
                   <TableRow 
                     key={task.taskId}
                     className={`hover:bg-accent/50 cursor-pointer ${
-                      overdue ? 'bg-red-50/50' : ''
+                      isActuallyOverdue ? 'bg-red-50/50' : ''
                     }`}
                     onClick={() => setViewingTask(task)}
                   >
                     <TableCell className="font-medium">
                       <div className="space-y-1">
-                        <p className="font-semibold text-primary">{task.title}</p>
+                        <h3 className="font-semibold text-primary">
+                          {task.taskName || task.title}
+                        </h3>
                         {task.description && (
                           <p className="text-xs text-secondary/70 line-clamp-2">
                             {task.description}
@@ -172,30 +174,31 @@ const TaskListView: React.FC<TaskListViewProps> = ({
                     </TableCell>
                     
                     <TableCell>
-                      <Badge className={`${getPriorityColor(task.priority)} text-xs`}>
+                      <Badge className={`${getPriorityColor(task.taskPriority || task.priority)} text-xs`}>
                         <Flag className="w-3 h-3 mr-1" />
-                        {task.priority || 'Medium'}
+                        {task.taskPriority === 'HIGH' ? 'High' :
+                        task.taskPriority === 'MEDIUM' ? 'Medium' :
+                        task.taskPriority === 'LOW' ? 'Low' : 'Not Set'}
                       </Badge>
                     </TableCell>
-                      <TableCell>                      <Badge className={`${overdue ? 'bg-red-100 text-red-800 border-red-200' : getStatusColor(task.status)} text-xs`}>
-                        {overdue ? 'Overdue' : (task.status?.replace('-', ' ') || 'In Progress')}
-                      </Badge>
-                    </TableCell>
-                    
                     <TableCell>
-                      <span className="text-sm font-medium">
-                        {getProjectName(task.projectId)}
-                      </span>
+                      <Badge className={`${statusColorClass} text-xs whitespace-nowrap`}>
+                        {displayStatus === 'TO_DO' ? 'To Do' :
+                        displayStatus === 'IN_PROGRESS' ? 'In Progress' :
+                        displayStatus === 'COMPLETED' ? 'Completed' :
+                        displayStatus === 'OVERDUE' ? 'Overdue' :
+                        displayStatus === 'CANCELLED' ? 'Cancelled' : 'In Progress'}
+                      </Badge>
                     </TableCell>
                     
                     <TableCell>
                       {task.dueDate ? (
                         <div className={`flex items-center text-sm ${
-                          overdue ? 'text-red-600' : 'text-secondary/70'
+                          isActuallyOverdue ? 'text-red-600' : 'text-secondary/70'
                         }`}>
                           <Calendar className="w-3 h-3 mr-1" />
                           {new Date(task.dueDate).toLocaleDateString()}
-                          {overdue && (
+                          {isActuallyOverdue && (
                             <Badge className="ml-2 bg-red-100 text-red-800 text-xs">
                               <Clock className="w-3 h-3 mr-1" />
                               Overdue
