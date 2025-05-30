@@ -512,17 +512,17 @@ const TeamDashboard = () => {
                     >
                       Completed
                     </div>
-                  )}
-                  {task.taskStatus !== 'CANCELLED' && (
-                    <div 
-                      className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
-                      onClick={() => {
-                        updateTaskStatus(task.taskId, 'CANCELLED');
-                        setShowStatusOptions(false);
-                      }}
-                    >
-                      Cancel Task
-                    </div>
+                  // )}
+                  // {task.taskStatus !== 'CANCELLED' && (
+                  //   <div
+                  //     className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
+                  //     onClick={() => {
+                  //       updateTaskStatus(task.taskId, 'CANCELLED');
+                  //       setShowStatusOptions(false);
+                  //     }}
+                  //   >
+                  //     Cancel Task
+                  //   </div>
                   )}
                 </div>
               )}
