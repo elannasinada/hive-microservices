@@ -41,7 +41,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
         content: 'Started working on this task?',
         timestamp: new Date().toISOString(),
         avatar: '/placeholder-avatar.png'
-      }g
+      }
     ]);
   }, [task.id]);
 
