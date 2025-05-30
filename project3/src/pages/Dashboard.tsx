@@ -32,6 +32,7 @@ const Dashboard = () => {
   const [activeProject, setActiveProject] = useState(null);
   const [myTasks, setMyTasks] = useState([]);
   const [dueToday, setDueToday] = useState([]);
+  const [cancelledTasks, setCancelledTasks] = useState([]);
   const [upcomingTasks, setUpcomingTasks] = useState([]);
   const [completedTasks, setCompletedTasks] = useState([]);
   const [history, setHistory] = useState([]);
@@ -72,6 +73,13 @@ const Dashboard = () => {
                                     status !== 'completed_task';
               return isDueDate && isNotCompleted;
             };
+
+            // Helper function to check if task is cancelled
+            const isTaskCancelled = (task: any) => {
+              const status = task.taskStatus?.toLowerCase() || '';
+              return status === 'cancelled';
+            };
+
             
             // Filter overdue tasks
             setDueToday(tasks.filter(t => isTaskOverdue(t)));
@@ -85,6 +93,15 @@ const Dashboard = () => {
                      status === 'progress') &&
                      !isTaskOverdue(t);
             }));
+
+            // Filter cancelled tasks
+            setCancelledTasks(tasks.filter(t => isTaskCancelled(t => {
+                const status = t.taskStatus?.toLowerCase() || '';
+                return status === 'cancelled' ||
+                         status === 'canceled' ||
+                         status === 'cancelled_task';
+            })));
+
             
             // Filter completed tasks
             setCompletedTasks(tasks.filter(t => {
