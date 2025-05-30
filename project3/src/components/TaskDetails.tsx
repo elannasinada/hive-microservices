@@ -24,8 +24,8 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
   const [taskData, setTaskData] = useState({
     title: task.taskName || task.title || '',
     description: task.description || '',
-    status: task.status || 'in_progress',
-    priority: task.priority || 'medium',
+    status: task.status || 'IN_PROGRESS',
+    priority: task.priority || 'MEDIUM',
     dueDate: task.dueDate || ''
   });
   const [comments, setComments] = useState<any[]>([]);
@@ -37,11 +37,11 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
     setComments([
       {
         id: 1,
-        author: 'John Doe',
-        content: 'Started working on this task',
+        author: 'Mohammed Qasim',
+        content: 'Started working on this task?',
         timestamp: new Date().toISOString(),
         avatar: '/placeholder-avatar.png'
-      }
+      }g
     ]);
   }, [task.id]);
 
@@ -130,10 +130,9 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
+      case 'HIGH': return 'bg-red-100 text-red-800 border-red-200';
+      case 'MEDIUM': return 'bg-green-100 text-green-800 border-green-200';
+      case 'LOW': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };  const getStatusColor = (status: string) => {
@@ -156,12 +155,19 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
           <DialogTitle className="text-primary flex items-center justify-between">
             <span>{editingTask ? 'Edit Task' : 'Task Details'}</span>
             <div className="flex space-x-2">
-              <Badge className={getPriorityColor(task.priority)}>
+              <Badge className={`text-xs ${getPriorityColor(task.taskPriority)} ml-2`}>
                 <Flag className="w-3 h-3 mr-1" />
-                {task.priority}
+                {task.taskPriority === 'HIGH' ? 'High' :
+                    task.taskPriority === 'MEDIUM' ? 'Medium' :
+                        task.taskPriority === 'LOW' ? 'Low' : 'Not Set'}
               </Badge>
-              <Badge className={getStatusColor(task.status)}>
-                {task.status?.replace('-', ' ')}
+              <Badge className={ `text-xs ${getStatusColor(task.taskStatus)} ml-2`}>
+                {task.taskStatus === 'TO_DO' ? 'To Do' :
+                    task.taskStatus === 'IN_PROGRESS' ? 'In Progress' :
+                        task.taskStatus === 'COMPLETED' ? 'Completed' :
+                            task.taskStatus === 'OVERDUE' ? 'Overdue' :
+                                task.taskStatus === 'CANCELLED' ? 'Cancelled' : 'In Progress'}
+                {task.taskStatus !== 'OVERDUE' && task.taskStatus !== 'CANCELLED' && ' ▾'}
               </Badge>
             </div>
           </DialogTitle>
