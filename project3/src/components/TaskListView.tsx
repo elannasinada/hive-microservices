@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,9 +48,13 @@ const TaskListView: React.FC<TaskListViewProps> = ({
       case 'low': return 'bg-green-100 text-green-800 border-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
-  };
-  const getStatusColor = (status: string) => {
+  };  const getStatusColor = (status: string) => {
     const statusLower = status?.toLowerCase() || '';
+    
+    // Handle TO_DO tasks
+    if (statusLower === 'to-do' || statusLower === 'to_do' || statusLower === 'todo') {
+      return 'bg-purple-100 text-purple-800 border-purple-200';
+    }
     
     // Handle overdue tasks
     if (statusLower === 'overdue') {
@@ -151,7 +154,7 @@ const TaskListView: React.FC<TaskListViewProps> = ({
                 
                 return (
                   <TableRow 
-                    key={task.id}
+                    key={task.taskId}
                     className={`hover:bg-accent/50 cursor-pointer ${
                       overdue ? 'bg-red-50/50' : ''
                     }`}

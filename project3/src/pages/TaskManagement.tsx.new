@@ -148,9 +148,7 @@ const TaskManagement = () => {
         console.log('Upcoming tasks:', filtered.length);
         break;
       case 'overdue':
-        filtered = tasks.filter(t => 
-          (t.taskStatus === 'OVERDUE' || isTaskOverdue(t)) && t.taskStatus !== 'CANCELLED'
-        );
+        filtered = tasks.filter(t => t.taskStatus === 'OVERDUE' || isTaskOverdue(t));
         console.log('Overdue tasks:', filtered.length);
         break;
       case 'completed':

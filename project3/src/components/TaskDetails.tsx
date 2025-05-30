@@ -130,8 +130,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
       case 'low': return 'bg-green-100 text-green-800 border-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
-  };
-  const getStatusColor = (status: string) => {
+  };  const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase();
     if (statusLower === 'completed' || statusLower === 'complete') {
       return 'bg-green-100 text-green-800 border-green-200';
@@ -139,6 +138,8 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
       return 'bg-blue-100 text-blue-800 border-blue-200';
     } else if (statusLower === 'overdue') {
       return 'bg-red-100 text-red-800 border-red-200';
+    } else if (statusLower === 'to-do' || statusLower === 'to_do' || statusLower === 'todo') {
+      return 'bg-purple-100 text-purple-800 border-purple-200';
     }
     return 'bg-gray-100 text-gray-800 border-gray-200';
   };
@@ -194,10 +195,10 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="text-sm font-medium">Status</label>
-                        <Select value={taskData.status} onValueChange={(value) => setTaskData({...taskData, status: value})}>
-                          <SelectTrigger>
+                        <Select value={taskData.status} onValueChange={(value) => setTaskData({...taskData, status: value})}>                          <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>                          <SelectContent>
+                            <SelectItem value="to_do">To Do</SelectItem>
                             <SelectItem value="in_progress">In Progress</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
                           </SelectContent>

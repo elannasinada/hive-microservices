@@ -17,12 +17,21 @@ interface KanbanBoardProps {
 // Helper function to check if a task is overdue
 const isTaskOverdue = (task: any) => {
   if (!task.dueDate) return false;
-  const isDueDate = new Date(task.dueDate) < new Date();
-  const isNotCompleted = !task.status || 
-                         (task.status.toLowerCase() !== 'completed' && 
-                          task.status.toLowerCase() !== 'complete' && 
-                          task.status.toLowerCase() !== 'completed_task');
-  return isDueDate && isNotCompleted;
+  const dueDate = new Date(task.dueDate);
+  const currentDate = new Date();
+  
+  // Reset time to compare only dates, not time
+  dueDate.setHours(23, 59, 59, 999);
+  currentDate.setHours(0, 0, 0, 0);
+  
+  // If task is completed, it's not overdue regardless of due date
+  if (task.taskStatus === 'COMPLETED') return false;
+  
+  // If task is cancelled, it's not overdue
+  if (task.taskStatus === 'CANCELLED') return false;
+  
+  // Task is overdue if due date has passed and it's not completed
+  return dueDate < currentDate;
 };
 
 const KanbanBoard: React.FC<KanbanBoardProps> = ({ 
@@ -33,11 +42,11 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   canEdit 
 }) => {
   const [draggedTask, setDraggedTask] = useState<any>(null);
-  const [viewingTask, setViewingTask] = useState<any>(null);
-  const columns = [
-    { id: 'overdue', title: 'Overdue', count: tasks.filter(t => isTaskOverdue(t)).length },
-    { id: 'in-progress', title: 'In Progress', count: tasks.filter(t => (t.status === 'in-progress' || t.status === 'in_progress') && !isTaskOverdue(t)).length },
-    { id: 'completed', title: 'Completed', count: tasks.filter(t => t.status === 'completed').length }
+  const [viewingTask, setViewingTask] = useState<any>(null);  const columns = [
+    { id: 'overdue', title: 'Overdue', count: tasks.filter(t => t.taskStatus === 'OVERDUE').length },
+    { id: 'to-do', title: 'To Do', count: tasks.filter(t => t.taskStatus === 'TO_DO').length },
+    { id: 'in-progress', title: 'In Progress', count: tasks.filter(t => t.taskStatus === 'IN_PROGRESS' && !isTaskOverdue(t)).length },
+    { id: 'completed', title: 'Completed', count: tasks.filter(t => t.taskStatus === 'COMPLETED').length }
   ];
 
   const getPriorityColor = (priority: string) => {
@@ -49,9 +58,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   };  const getStatusColor = (status: string) => {
     switch (status) {
+      case 'overdue': return 'bg-red-500';
+      case 'to-do': return 'bg-purple-500';
       case 'completed': return 'bg-green-500';
       case 'in-progress': return 'bg-blue-500';
-      case 'overdue': return 'bg-red-500';
       default: return 'bg-gray-400';
     }
   };
@@ -65,48 +75,65 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
-
   const handleDrop = (e: React.DragEvent, newStatus: string) => {
     e.preventDefault();
-    if (draggedTask && draggedTask.status !== newStatus && canEdit) {
-      onStatusChange(draggedTask.id, newStatus);
+    if (draggedTask && draggedTask.taskStatus !== getTaskStatusFromColumn(newStatus) && canEdit) {
+      // Convert column ID to TaskStatus enum value
+      const taskStatus = getTaskStatusFromColumn(newStatus);
+      onStatusChange(draggedTask.taskId || draggedTask.id, taskStatus);
     }
     setDraggedTask(null);
   };
-  const getTasksByStatus = (status: string) => {
+  // Helper function to convert column ID to TaskStatus enum value
+  const getTaskStatusFromColumn = (columnId: string) => {
+    switch (columnId) {
+      case 'overdue': return 'OVERDUE';
+      case 'to-do': return 'TO_DO';
+      case 'in-progress': return 'IN_PROGRESS';
+      case 'completed': return 'COMPLETED';
+      default: return columnId;
+    }
+  };  const getTasksByStatus = (status: string) => {
     if (status === 'overdue') {
-      return tasks.filter(task => isTaskOverdue(task));
+      return tasks.filter(task => task.taskStatus === 'OVERDUE');
+    } else if (status === 'to-do') {
+      return tasks.filter(task => task.taskStatus === 'TO_DO' && !isTaskOverdue(task));
     } else if (status === 'in-progress') {
       return tasks.filter(task => 
-        (task.status === 'in-progress' || task.status === 'in_progress') && 
+        task.taskStatus === 'IN_PROGRESS' && 
         !isTaskOverdue(task)
       );
+    } else if (status === 'completed') {
+      return tasks.filter(task => task.taskStatus === 'COMPLETED');
     } else {
-      return tasks.filter(task => task.status === status);
+      return tasks.filter(task => task.taskStatus === status);
     }
-  };
+  };const TaskCard = ({ task }: { task: any }) => {
+    const project = projects.find(p => p.projectId === task.projectId);
+    const overdue = isTaskOverdue(task);
+    
+    // Get the appropriate border color based on task status
+    const getBorderColor = () => {
+      if (overdue) return 'border-l-red-500 bg-red-50/50';
+      
+      switch (task.taskStatus) {
+        case 'TO_DO': return 'border-l-purple-500 bg-purple-50/30';
+        case 'IN_PROGRESS': return 'border-l-blue-500 bg-blue-50/30';
+        case 'COMPLETED': return 'border-l-green-500 bg-green-50/30';
+        case 'CANCELLED': return 'border-l-gray-500 bg-gray-50/30';
+        default: return 'border-l-gray-400 bg-gray-50/30';
+      }
+    };
 
-  const isOverdue = (dueDate: string) => {
-    if (!dueDate) return false;
-    return new Date(dueDate) < new Date() && true;
-  };
-
-  const TaskCard = ({ task }: { task: any }) => {
-    const project = projects.find(p => p.id === task.projectId);
-    const overdue = isOverdue(task.dueDate);
-
-    return (
-      <Card 
-        className={`mb-3 cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 ${
-          overdue ? 'border-l-red-500 bg-red-50/50' : `border-l-${getStatusColor(task.status).replace('bg-', '')}`
-        }`}
+    return (      <Card 
+        className={`mb-3 cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all duration-200 border-l-4 ${getBorderColor()}`}
         draggable={canEdit}
         onDragStart={(e) => handleDragStart(e, task)}
         onClick={() => setViewingTask(task)}
       >
         <CardContent className="p-4">
           <div className="flex items-start justify-between mb-3">
-            <h3 className="font-semibold text-sm line-clamp-2 flex-1">{task.title}</h3>
+            <h3 className="font-semibold text-sm line-clamp-2 flex-1">{task.taskName || task.title}</h3>
             <Button
               variant="ghost"
               size="sm"
@@ -127,9 +154,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
           )}
 
           <div className="flex items-center justify-between mb-3">
-            <Badge className={`text-xs ${getPriorityColor(task.priority)}`}>
+            <Badge className={`text-xs ${getPriorityColor(task.taskPriority || task.priority)}`}>
               <Flag className="w-3 h-3 mr-1" />
-              {task.priority || 'Medium'}
+              {task.taskPriority || task.priority || 'Medium'}
             </Badge>
             
             {overdue && (
@@ -151,22 +178,22 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
           {project && (
             <div className="flex items-center text-xs text-secondary/60 mb-2">
-              <span className="font-medium">{project.name || project.title}</span>
+              <span className="font-medium">{project.projectName || project.name || project.title}</span>
             </div>
           )}
 
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-1">
-              {task.assignees?.slice(0, 3).map((assignee: any, index: number) => (
+              {task.assignedUsers && Object.keys(task.assignedUsers).slice(0, 3).map((userId: string, index: number) => (
                 <Avatar key={index} className="w-6 h-6">
                   <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                    {assignee.username?.slice(0, 2).toUpperCase() || 'U'}
+                    {task.assignedUsers[userId]?.username?.slice(0, 2).toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
               ))}
-              {task.assignees?.length > 3 && (
+              {task.assignedUsers && Object.keys(task.assignedUsers).length > 3 && (
                 <div className="w-6 h-6 bg-accent/30 rounded-full flex items-center justify-center text-xs">
-                  +{task.assignees.length - 3}
+                  +{Object.keys(task.assignedUsers).length - 3}
                 </div>
               )}
             </div>
@@ -181,13 +208,26 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       </Card>
     );
   };
-
+  // Helper function to convert TaskStatus enum to column ID
+  const getColumnFromTaskStatus = (taskStatus: string) => {
+    switch (taskStatus) {
+      case 'OVERDUE': return 'overdue';
+      case 'TO_DO': return 'to-do';
+      case 'IN_PROGRESS': return 'in-progress';
+      case 'COMPLETED': return 'completed';
+      default: return 'to-do';
+    }
+  };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {columns.map((column) => (
-        <div
+      {columns.map((column) => (        <div
           key={column.id}
-          className="bg-gray-50 rounded-lg p-4 min-h-[500px]"
+          className={`rounded-lg p-4 min-h-[500px] border border-gray-200 ${
+            column.id === 'overdue' ? 'bg-red-50/50' :
+            column.id === 'to-do' ? 'bg-purple-50/50' :
+            column.id === 'in-progress' ? 'bg-blue-50/50' :
+            column.id === 'completed' ? 'bg-green-50/50' : 'bg-gray-50'
+          }`}
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e, column.id)}
         >
@@ -195,15 +235,22 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
             <div className="flex items-center space-x-2">
               <div className={`w-3 h-3 rounded-full ${getStatusColor(column.id)}`}></div>
               <h3 className="font-semibold text-primary">{column.title}</h3>
-            </div>
-            <Badge variant="outline" className="text-xs">
+            </div>            <Badge 
+              variant="outline" 
+              className={`text-xs font-semibold ${
+                column.id === 'overdue' ? 'border-red-300 text-red-700' :
+                column.id === 'to-do' ? 'border-purple-300 text-purple-700' :
+                column.id === 'in-progress' ? 'border-blue-300 text-blue-700' :
+                column.id === 'completed' ? 'border-green-300 text-green-700' : 'border-gray-300 text-gray-700'
+              }`}
+            >
               {column.count}
             </Badge>
           </div>
 
           <div className="space-y-3">
             {getTasksByStatus(column.id).map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard key={task.taskId} task={task} />
             ))}
           </div>
 
@@ -225,7 +272,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
           onClose={() => setViewingTask(null)}
           onUpdate={() => {
             setViewingTask(null);
-            onTaskUpdate(viewingTask.id, {});
+            onTaskUpdate(viewingTask.taskId || viewingTask.id, {});
           }}
           canEdit={canEdit}
         />

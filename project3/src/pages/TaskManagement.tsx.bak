@@ -29,6 +29,7 @@ enum TaskPriority {
 }
 
 const TaskManagement = () => {
+
   const { user } = useAuth();
   const [tasks, setTasks] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -50,7 +51,6 @@ const TaskManagement = () => {
   useEffect(() => {
     applyFilters();
   }, [tasks, searchQuery, statusFilter, priorityFilter, projectFilter]);
-
   const loadData = async () => {
     if (!user) return;
     
@@ -108,7 +108,6 @@ const TaskManagement = () => {
       setLoading(false);
     }
   };
-
   // Helper function to check if a task is overdue - identical to TeamDashboard
   const isTaskOverdue = (task: any) => {
     if (!task.dueDate) return false;
@@ -117,7 +116,6 @@ const TaskManagement = () => {
     const isNotCompleted = task.taskStatus !== 'COMPLETED';
     return isDueDate && isNotCompleted;
   };
-
   const getDisplayStatus = (task: any) => {
     // Use the same status display logic as in TeamDashboard
     if (task.taskStatus === 'IN_PROGRESS') return 'In Progress'; 
@@ -127,8 +125,7 @@ const TaskManagement = () => {
     return 'Unknown Status';
   };
 
-  // Helper function to consistently filter tasks by category - same approach as TeamDashboard
-  const filterTasksByCategory = (tasks: any[], category: string, todayStr?: string) => {
+  // Helper function to consistently filter tasks by category - same approach as TeamDashboard  const filterTasksByCategory = (tasks: any[], category: string, todayStr?: string) => {
     console.log(`Filtering ${tasks.length} tasks for category: ${category}`);
     
     let filtered = [];
@@ -148,9 +145,7 @@ const TaskManagement = () => {
         console.log('Upcoming tasks:', filtered.length);
         break;
       case 'overdue':
-        filtered = tasks.filter(t => 
-          (t.taskStatus === 'OVERDUE' || isTaskOverdue(t)) && t.taskStatus !== 'CANCELLED'
-        );
+        filtered = tasks.filter(t => t.taskStatus === 'OVERDUE' || isTaskOverdue(t));
         console.log('Overdue tasks:', filtered.length);
         break;
       case 'completed':
@@ -223,7 +218,6 @@ const TaskManagement = () => {
       });
     }
   };
-
   const handleTaskStatusChange = async (taskId: string, newStatus: string) => {
     // Following TeamDashboard's approach for task status updates
     try {
@@ -259,9 +253,7 @@ const TaskManagement = () => {
           await loadData();
           return;
         }
-      }
-
-      // Normal update flow
+      }      // Normal update flow
       await taskAPI.update(taskId, { taskStatus: newStatus });
       
       // Refresh all data
@@ -279,9 +271,7 @@ const TaskManagement = () => {
         variant: "destructive"
       });
     }
-  };
-
-  const getProjectStats = () => {
+  };  const getProjectStats = () => {
     // Use the same task filtering approach as TeamDashboard
     const totalTasks = filteredTasks.length;
     const toDoTasks = filterTasksByCategory(filteredTasks, 'to-do').length;
@@ -298,9 +288,7 @@ const TaskManagement = () => {
       overdueTasks,
       dueTodayTasks 
     };
-  };
-
-  const stats = getProjectStats();
+  };const stats = getProjectStats();
 
   if (loading) {
     return (
@@ -359,10 +347,8 @@ const TaskManagement = () => {
                   <p className="text-xs text-secondary/70">In Progress</p>
                 </div>
               </CardContent>
-            </Card>
-            <Card className="border-accent/20">
-              <CardContent className="p-4">
-                <div className="text-center">
+            </Card>            <Card className="border-accent/20">
+              <CardContent className="p-4">                <div className="text-center">
                   <p className="text-2xl font-bold text-red-600">{stats.overdueTasks}</p>
                   <p className="text-xs text-secondary/70">Overdue</p>
                 </div>
@@ -391,13 +377,10 @@ const TaskManagement = () => {
                     className="pl-10"
                   />
                 </div>
-                
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-full md:w-40">
                     <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
+                  </SelectTrigger>                  <SelectContent>                    <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="to-do">To Do</SelectItem>
                     <SelectItem value="overdue">Overdue</SelectItem>
                     <SelectItem value="in-progress">In Progress</SelectItem>

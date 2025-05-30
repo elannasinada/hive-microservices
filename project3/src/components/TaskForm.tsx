@@ -188,10 +188,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
             
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
-                <SelectTrigger className="border-accent/30 focus:border-primary">
+              <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>                <SelectTrigger className="border-accent/30 focus:border-primary">
                   <SelectValue />
                 </SelectTrigger>                <SelectContent>
+                  <SelectItem value="to_do">To Do</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>

@@ -15,6 +15,7 @@ import index from "@/pages/Index.tsx";
 
 // Define enums matching the Java backend
 enum TaskStatus {
+  TO_DO = 'TO_DO',
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
   OVERDUE = 'OVERDUE',
@@ -30,22 +31,22 @@ enum TaskPriority {
 // Helper function to calculate project duration in months
 const calculateDuration = (startDate: string, endDate: string): string => {
   if (!startDate || !endDate) return "Unknown duration";
-  
+
   try {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     // Calculate difference in months
-    const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 + 
-                       (end.getMonth() - start.getMonth());
-                       
+    const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 +
+        (end.getMonth() - start.getMonth());
+
     // Add one month if there are remaining days (round up)
     const roundedMonths = diffMonths + (end.getDate() >= start.getDate() ? 0 : -1) + 1;
-    
+
     // Format the output
-    return roundedMonths <= 0 ? 
-           "Less than a month" : 
-           `${roundedMonths} ${roundedMonths === 1 ? 'month' : 'months'}`;
+    return roundedMonths <= 0 ?
+        "Less than a month" :
+        `${roundedMonths} ${roundedMonths === 1 ? 'month' : 'months'}`;
   } catch (e) {
     console.error("Error calculating project duration:", e);
     return "Unknown duration";
@@ -53,7 +54,8 @@ const calculateDuration = (startDate: string, endDate: string): string => {
 };
 
 const TeamDashboard = () => {
-  const { user } = useAuth();  const [activeProject, setActiveProject] = useState<any>(null);
+  const { user } = useAuth();
+  const [activeProject, setActiveProject] = useState<any>(null);
   const [myTasks, setMyTasks] = useState<any[]>([]);
   const [dueToday, setDueToday] = useState<any[]>([]);
   const [overdueTasks, setOverdueTasks] = useState<any[]>([]);
@@ -62,19 +64,21 @@ const TeamDashboard = () => {
   const [completedTasks, setCompletedTasks] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('all');  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [loadingTeamMembers, setLoadingTeamMembers] = useState(false);
   const [projectTasks, setProjectTasks] = useState<any[]>([]);
   const [projectProgress, setProjectProgress] = useState(0);
-  // Helper function to check if a task is overdue - moved to the top
+
+  // Helper function to check if a task is overdue
   const isTaskOverdue = (task: any) => {
     if (!task.dueDate) return false;
     const isDueDate = new Date(task.dueDate) < new Date();
-    // Use exact enum values from TaskStatus (COMPLETED)
     const isNotCompleted = task.taskStatus !== 'COMPLETED';
     return isDueDate && isNotCompleted;
   };
-    // Helper function for task priority color
+
+  // Helper function for task priority color
   const getTaskPriorityColor = (priority: string) => {
     switch (priority?.toUpperCase()) {
       case 'HIGH': return 'bg-red-100 text-red-800 border-red-200';
@@ -83,10 +87,12 @@ const TeamDashboard = () => {
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
-    // Helper function for task status color
+
+  // Helper function for task status color
   const getStatusColor = (status: string) => {
-    // Use exact enum values from TaskStatus
     switch (status) {
+      case 'TO_DO':
+        return 'bg-purple-100 text-purple-800';
       case 'COMPLETED':
         return 'bg-green-100 text-green-800';
       case 'IN_PROGRESS':
@@ -102,36 +108,31 @@ const TeamDashboard = () => {
 
   // Helper function to consistently filter tasks by category
   const filterTasksByCategory = (tasks: any[], category: string, todayStr?: string) => {
-    console.log(`Filtering ${tasks.length} tasks for category: ${category}`);
-
     let filtered = [];
     switch (category) {
+      case 'to-do':
+        filtered = tasks.filter(t => t.taskStatus === 'TO_DO');
+        break;
       case 'due-today':
         const today = todayStr || new Date().toISOString().slice(0, 10);
         filtered = tasks.filter(t => t.dueDate && t.dueDate.slice(0, 10) === today);
-        console.log(`Tasks due today (${today}):`, filtered.length);
         break;
       case 'upcoming':
         filtered = tasks.filter(t => t.taskStatus === 'IN_PROGRESS' && !isTaskOverdue(t));
-        console.log('Upcoming tasks:', filtered.length);
         break;
       case 'overdue':
         filtered = tasks.filter(t =>
             (t.taskStatus === 'OVERDUE' || isTaskOverdue(t)) && t.taskStatus !== 'CANCELLED'
         );
-        console.log('Overdue tasks:', filtered.length);
         break;
       case 'completed':
         filtered = tasks.filter(t => t.taskStatus === 'COMPLETED');
-        console.log('Completed tasks:', filtered.length);
         break;
       case 'cancelled':
         filtered = tasks.filter(t => t.taskStatus === 'CANCELLED');
-        console.log('Cancelled tasks:', filtered.length);
         break;
       default:
         filtered = tasks;
-        console.log('All tasks (no category filter):', filtered.length);
     }
     return filtered;
   };
@@ -140,26 +141,17 @@ const TeamDashboard = () => {
   useEffect(() => {
     if (user) {
       projectAPI.getActiveProjectForUser(user.id)
-          .then(res => {
-            console.log('Active project:', res);
-            setActiveProject(res);
-          })        .catch(err => {
-            setActiveProject(null);
-            console.error('Active project fetch failed:', err);
-          });
+          .then(res => setActiveProject(res))
+          .catch(() => setActiveProject(null));
     }
   }, [user]);
 
   // Fetch tasks and project history
   useEffect(() => {
     if (user) {
-      // Fetch project history
       projectAPI.getCompletedProjectsForUser(user.id)
-        .then(setHistory)
-        .catch(err => {
-          setHistory([]);
-          console.error('Completed projects fetch failed:', err);
-        });
+          .then(setHistory)
+          .catch(() => setHistory([]));
     }
   }, [user]);
 
@@ -167,16 +159,13 @@ const TeamDashboard = () => {
   useEffect(() => {
     if (activeProject && activeProject.projectId) {
       setLoadingTeamMembers(true);
-      console.log('Fetching team members for project:', activeProject.projectId);
       projectAPI.listMembers(activeProject.projectId)
-        .then(response => {
-          // Extract projectMembers array from the response
-          const members = response.projectMembers || [];
-          console.log('Team members loaded:', members.length, members);
-          setTeamMembers(members);
-        })
-        .catch(err => console.error('Failed to fetch team members:', err))
-        .finally(() => setLoadingTeamMembers(false));
+          .then(response => {
+            const members = response.projectMembers || [];
+            setTeamMembers(members);
+          })
+          .catch(err => console.error('Failed to fetch team members:', err))
+          .finally(() => setLoadingTeamMembers(false));
     } else {
       // Reset team members when no active project
       setTeamMembers([]);
@@ -188,100 +177,103 @@ const TeamDashboard = () => {
     if (activeProject && activeProject.projectId) {
       console.log('Fetching tasks for project:', activeProject.projectId);
       taskAPI.search({ projectId: activeProject.projectId })
-        .then(tasks => {
-          console.log('Project tasks loaded:', tasks.length, tasks);
-          setProjectTasks(tasks);
+          .then(tasks => {
+            console.log('Project tasks loaded:', tasks.length, tasks);
+            setProjectTasks(tasks);
 
-          // --- START Frontend Workaround --- //
-          // Filter tasks by assigned user ID for My Tasks section          // Debug log to inspect task structure
-          if (tasks.length > 0) {
-            console.log('Sample task object structure for filtering:', tasks[0]);
-          }
-            // Check if current user ID is in the assignedUsers map
-          console.log('Current user ID (for task assignment check):', user.id);
-          
-          const myActiveProjectTasks = tasks.filter((task: any) => {
-            // Debug logging for assignment check
-            console.log(`Checking task ${task.taskId} (${task.taskName}) assignment:`, {
-              taskId: task.taskId,
-              hasAssignedUsers: !!task.assignedUsers,
-              assignedUsersKeys: task.assignedUsers ? Object.keys(task.assignedUsers) : 'none',
-              currentUserId: user.id.toString(),
-              isAssignedToCurrentUser: task.assignedUsers ? Object.keys(task.assignedUsers).includes(user.id.toString()) : false
-            });
-            
-            if (!task.assignedUsers) {
-              console.log(`Task ${task.taskId} has no assignedUsers field`);
-              return false;
+            // --- START Frontend Workaround --- //
+            // Filter tasks by assigned user ID for My Tasks section          // Debug log to inspect task structure
+            if (tasks.length > 0) {
+              console.log('Sample task object structure for filtering:', tasks[0]);
             }
-            
-            // The backend stores assignedUsers as a map where keys are user IDs
-            const isAssigned = Object.keys(task.assignedUsers).includes(user.id.toString());
-            console.log(`Task ${task.taskId} ${isAssigned ? 'IS' : 'is NOT'} assigned to current user`);
-            return isAssigned;
-          });
-            
-          console.log('My active project tasks (frontend filtered):', myActiveProjectTasks.length, myActiveProjectTasks);
-          setMyTasks(myActiveProjectTasks);
+            // Check if current user ID is in the assignedUsers map
+            console.log('Current user ID (for task assignment check):', user.id);
+
+            const myActiveProjectTasks = tasks.filter((task: any) => {
+              // Debug logging for assignment check
+              console.log(`Checking task ${task.taskId} (${task.taskName}) assignment:`, {
+                taskId: task.taskId,
+                hasAssignedUsers: !!task.assignedUsers,
+                assignedUsersKeys: task.assignedUsers ? Object.keys(task.assignedUsers) : 'none',
+                currentUserId: user.id.toString(),
+                isAssignedToCurrentUser: task.assignedUsers ? Object.keys(task.assignedUsers).includes(user.id.toString()) : false
+              });
+
+              if (!task.assignedUsers) {
+                console.log(`Task ${task.taskId} has no assignedUsers field`);
+                return false;
+              }
+
+              // The backend stores assignedUsers as a map where keys are user IDs
+              const isAssigned = Object.keys(task.assignedUsers).includes(user.id.toString());
+              console.log(`Task ${task.taskId} ${isAssigned ? 'IS' : 'is NOT'} assigned to current user`);
+              return isAssigned;
+            });
+
+            console.log('My active project tasks (frontend filtered):', myActiveProjectTasks.length, myActiveProjectTasks);
+            setMyTasks(myActiveProjectTasks);
             // Use the centralized filtering function for all task categories
-          const today = new Date();
-          const todayStr = today.toISOString().slice(0, 10);
-          
-          // Filter tasks into their respective categories
-          setDueToday(filterTasksByCategory(myActiveProjectTasks, 'due-today', todayStr));
-          setOverdueTasks(filterTasksByCategory(myActiveProjectTasks, 'overdue'));
-          setCancelledTasks(filterTasksByCategory(myActiveProjectTasks, 'cancelled'));
-          setUpcomingTasks(filterTasksByCategory(myActiveProjectTasks, 'upcoming'));
-          setCompletedTasks(filterTasksByCategory(myActiveProjectTasks, 'completed'));
+            const today = new Date();
+            const todayStr = today.toISOString().slice(0, 10);
+
+            // Filter tasks into their respective categories
+            setDueToday(filterTasksByCategory(myActiveProjectTasks, 'due-today', todayStr));
+            setOverdueTasks(filterTasksByCategory(myActiveProjectTasks, 'overdue'));
+            setCancelledTasks(filterTasksByCategory(myActiveProjectTasks, 'cancelled'));
+            setUpcomingTasks(filterTasksByCategory(myActiveProjectTasks, 'upcoming'));
+            setCompletedTasks(filterTasksByCategory(myActiveProjectTasks, 'completed'));
 
 
-          setOverdueTasks(myActiveProjectTasks.filter((t: any) => {
-            return t.taskStatus === 'OVERDUE' || isTaskOverdue(t);
-          }));
+            setOverdueTasks(myActiveProjectTasks.filter((t: any) => {
+              return t.taskStatus === 'OVERDUE' || isTaskOverdue(t);
+            }));
 
-          setCancelledTasks(myActiveProjectTasks.filter((t: any) => {
-            return t.taskStatus === 'CANCELLED';
-          }));
+            setCancelledTasks(myActiveProjectTasks.filter((t: any) => {
+              return t.taskStatus === 'CANCELLED';
+            }));
 
-          setUpcomingTasks(myActiveProjectTasks.filter((t: any) => {
-            return t.taskStatus === 'IN_PROGRESS';
-          }));
+            setUpcomingTasks(myActiveProjectTasks.filter((t: any) => {
+              return t.taskStatus === 'IN_PROGRESS';
+            }));
 
-          setCompletedTasks(myActiveProjectTasks.filter((t: any) => {
-            return t.taskStatus === 'COMPLETED';
-          }));
+            setCompletedTasks(myActiveProjectTasks.filter((t: any) => {
+              return t.taskStatus === 'COMPLETED';
+            }));
 
-          // --- END Frontend Workaround --- //
-
-          // Calculate project progress (using all project tasks)
-          if (tasks.length > 0) {
-            const completedTasks = tasks.filter((task: any) => task.taskStatus === 'COMPLETED');
-            const progressPercentage = Math.round((completedTasks.length / tasks.length) * 100);
-            setProjectProgress(progressPercentage);
-            console.log(`Project progress: ${completedTasks.length}/${tasks.length} = ${progressPercentage}%`);
-          } else {
+            // --- END Frontend Workaround --- //            // Calculate project progress (using all project tasks)
+            if (tasks.length > 0) {
+              const completedTasks = tasks.filter((task: any) => task.taskStatus === 'COMPLETED');
+              // Exclude CANCELLED and OVERDUE tasks from total count for progress calculation
+              const activeTasks = tasks.filter((task: any) => 
+                task.taskStatus !== 'CANCELLED' && task.taskStatus !== 'OVERDUE'
+              );
+              
+              if (activeTasks.length > 0) {
+                const progressPercentage = Math.round((completedTasks.length / activeTasks.length) * 100);
+                setProjectProgress(progressPercentage);
+                console.log(`Project progress: ${completedTasks.length}/${activeTasks.length} = ${progressPercentage}% (excluded ${tasks.length - activeTasks.length} cancelled/overdue tasks)`);
+              } else {
+                setProjectProgress(0);
+                console.log('No active tasks for progress calculation');
+              }
+            } else {
+              setProjectProgress(0);
+            }
+          })
+          .catch(err => {
+            console.error('Failed to fetch project tasks:', err);
+            setProjectTasks([]);
             setProjectProgress(0);
-          }
-        })
-        .catch(err => {
-          console.error('Failed to fetch project tasks:', err);
-          setProjectTasks([]);
-          setProjectProgress(0);
-
-          // Also clear my tasks if project tasks fetch fails
-          setMyTasks([]);
-          setDueToday([]);
-          setOverdueTasks([]);
-          setCancelledTasks([]);
-          setUpcomingTasks([]);
-          setCompletedTasks([]);
-        });
+            setMyTasks([]);
+            setDueToday([]);
+            setOverdueTasks([]);
+            setCancelledTasks([]);
+            setUpcomingTasks([]);
+            setCompletedTasks([]);
+          });
     } else {
-      // Reset project tasks when no active project
       setProjectTasks([]);
       setProjectProgress(0);
-
-      // Also clear my tasks if no active project
       setMyTasks([]);
       setDueToday([]);
       setOverdueTasks([]);
@@ -413,26 +405,34 @@ const TeamDashboard = () => {
       // Use the centralized filtering function for all task categories
       const today = new Date();
       const todayStr = today.toISOString().slice(0, 10);
-      
+
 
 
       // SUCCESS TOAST - This is where you add the progress recalculation
       toast({
         title: "Status Updated",
         description: "Task status has been updated successfully.",
-      });
-
-      // RECALCULATE PROJECT PROGRESS - ADD THIS BLOCK HERE
+      });      // RECALCULATE PROJECT PROGRESS - ADD THIS BLOCK HERE
       if (activeProject && activeProject.projectId) {
         taskAPI.search({ projectId: activeProject.projectId })
             .then(allProjectTasks => {
               setProjectTasks(allProjectTasks); // Update project tasks state
-
+              
               if (allProjectTasks.length > 0) {
                 const completedProjectTasks = allProjectTasks.filter((task: any) => task.taskStatus === 'COMPLETED');
-                const newProgressPercentage = Math.round((completedProjectTasks.length / allProjectTasks.length) * 100);
-                setProjectProgress(newProgressPercentage);
-                console.log(`Updated project progress: ${completedProjectTasks.length}/${allProjectTasks.length} = ${newProgressPercentage}%`);
+                // Exclude CANCELLED and OVERDUE tasks from total count for progress calculation
+                const activeProjectTasks = allProjectTasks.filter((task: any) => 
+                  task.taskStatus !== 'CANCELLED' && task.taskStatus !== 'OVERDUE'
+                );
+                
+                if (activeProjectTasks.length > 0) {
+                  const newProgressPercentage = Math.round((completedProjectTasks.length / activeProjectTasks.length) * 100);
+                  setProjectProgress(newProgressPercentage);
+                  console.log(`Updated project progress: ${completedProjectTasks.length}/${activeProjectTasks.length} = ${newProgressPercentage}% (excluded ${allProjectTasks.length - activeProjectTasks.length} cancelled/overdue tasks)`);
+                } else {
+                  setProjectProgress(0);
+                  console.log('No active tasks for updated progress calculation');
+                }
               } else {
                 setProjectProgress(0);
               }
@@ -451,507 +451,520 @@ const TeamDashboard = () => {
   };
   const TaskCard = ({ task }: { task: any }) => {
     const [showStatusOptions, setShowStatusOptions] = useState(false);
-    
+
     return (
-      <Card className="border-accent/20 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between mb-3">
-            <h3 className="font-semibold text-primary line-clamp-2">{task.taskName}</h3>
-            <Badge className={`text-xs ${getTaskPriorityColor(task.taskPriority)} ml-2`}>
+        <Card className="border-accent/20 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="font-semibold text-primary line-clamp-2">{task.taskName}</h3>
+              <Badge className={`text-xs ${getTaskPriorityColor(task.taskPriority)} ml-2`}>
                 {task.taskPriority === 'HIGH' ? 'High' :
-                task.taskPriority === 'MEDIUM' ? 'Medium' :
-                task.taskPriority === 'LOW' ? 'Low' : 'Not Set'}
-            </Badge>
+                    task.taskPriority === 'MEDIUM' ? 'Medium' :
+                        task.taskPriority === 'LOW' ? 'Low' : 'Not Set'}
+              </Badge>
 
-          </div>
+            </div>
 
-          <p className="text-sm text-secondary/70 mb-3 line-clamp-3">{task.description || 'No description available'}</p>
+            <p className="text-sm text-secondary/70 mb-3 line-clamp-3">{task.description || 'No description available'}</p>
 
-          <div className="flex items-center justify-between mb-3">
-            <div className="relative">              <Badge
-                className={`${getStatusColor(task.taskStatus)} cursor-pointer`}
-                onClick={() => {
-                  // Only allow status changes for tasks that aren't OVERDUE or CANCELLED
-                  if (task.taskStatus === 'OVERDUE' || task.taskStatus === 'CANCELLED') {
-                    toast({
-                      title: "Cannot Change Status",
-                      description: `This task is ${task.taskStatus === 'OVERDUE' ? 'overdue' : 'cancelled'} and its status cannot be changed.`,
-                      variant: "destructive"
-                    });
-                  } else {
-                    setShowStatusOptions(!showStatusOptions);
-                  }
-                }}
+            <div className="flex items-center justify-between mb-3">
+              <div className="relative">              <Badge
+                  className={`${getStatusColor(task.taskStatus)} cursor-pointer`}
+                  onClick={() => {
+                    // Only allow status changes for tasks that aren't OVERDUE or CANCELLED
+                    if (task.taskStatus === 'OVERDUE' || task.taskStatus === 'CANCELLED') {
+                      toast({
+                        title: "Cannot Change Status",
+                        description: `This task is ${task.taskStatus === 'OVERDUE' ? 'overdue' : 'cancelled'} and its status cannot be changed.`,
+                        variant: "destructive"
+                      });
+                    } else {
+                      setShowStatusOptions(!showStatusOptions);
+                    }
+                  }}
               >
-                {task.taskStatus === 'IN_PROGRESS' ? 'In Progress' : 
-                 task.taskStatus === 'COMPLETED' ? 'Completed' : 
-                 task.taskStatus === 'OVERDUE' ? 'Overdue' :
-                 task.taskStatus === 'CANCELLED' ? 'Cancelled' : 'In Progress'}
+                {task.taskStatus === 'TO_DO' ? 'To Do' :
+                    task.taskStatus === 'IN_PROGRESS' ? 'In Progress' :
+                        task.taskStatus === 'COMPLETED' ? 'Completed' :
+                            task.taskStatus === 'OVERDUE' ? 'Overdue' :
+                                task.taskStatus === 'CANCELLED' ? 'Cancelled' : 'In Progress'}
                 {task.taskStatus !== 'OVERDUE' && task.taskStatus !== 'CANCELLED' && ' ▾'}
               </Badge>
                 {showStatusOptions && (
-                <div className="absolute top-full left-0 mt-1 bg-white shadow-lg rounded-md p-1 z-10 border border-accent/20">
-                  {/* Only show status options that make sense based on current status */}
-                  {task.taskStatus !== 'IN_PROGRESS' && (
-                    <div 
-                      className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
-                      onClick={() => {
-                        updateTaskStatus(task.taskId, 'IN_PROGRESS');
-                        setShowStatusOptions(false);
-                      }}
-                    >
-                      In Progress
+                    <div className="absolute top-full left-0 mt-1 bg-white shadow-lg rounded-md p-1 z-10 border border-accent/20">
+                      {/* Only show status options that make sense based on current status */}
+                      {task.taskStatus !== 'TO_DO' && (
+                          <div
+                              className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
+                              onClick={() => {
+                                updateTaskStatus(task.taskId, 'TO_DO');
+                                setShowStatusOptions(false);
+                              }}
+                          >
+                            To Do
+                          </div>
+                      )}
+                      {task.taskStatus !== 'IN_PROGRESS' && (
+                          <div
+                              className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
+                              onClick={() => {
+                                updateTaskStatus(task.taskId, 'IN_PROGRESS');
+                                setShowStatusOptions(false);
+                              }}
+                          >
+                            In Progress
+                          </div>
+                      )}{task.taskStatus !== 'COMPLETED' && (
+                        <div
+                            className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
+                            onClick={() => {
+                              updateTaskStatus(task.taskId, 'COMPLETED');
+                              setShowStatusOptions(false);
+                            }}
+                        >
+                          Completed
+                        </div>
+                        // )}
+                        // {task.taskStatus !== 'CANCELLED' && (
+                        //   <div
+                        //     className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
+                        //     onClick={() => {
+                        //       updateTaskStatus(task.taskId, 'CANCELLED');
+                        //       setShowStatusOptions(false);
+                        //     }}
+                        //   >
+                        //     Cancel Task
+                        //   </div>
+                    )}
                     </div>
-                  )}                  {task.taskStatus !== 'COMPLETED' && (
-                    <div 
-                      className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
-                      onClick={() => {
-                        updateTaskStatus(task.taskId, 'COMPLETED');
-                        setShowStatusOptions(false);
-                      }}
-                    >
-                      Completed
-                    </div>
-                  // )}
-                  // {task.taskStatus !== 'CANCELLED' && (
-                  //   <div
-                  //     className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
-                  //     onClick={() => {
-                  //       updateTaskStatus(task.taskId, 'CANCELLED');
-                  //       setShowStatusOptions(false);
-                  //     }}
-                  //   >
-                  //     Cancel Task
-                  //   </div>
-                  )}
-                </div>
+                )}
+              </div>
+              <div className="flex items-center text-xs text-secondary/60">
+                <Calendar className="w-3 h-3 mr-1" />
+                {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <MessageSquare className="w-4 h-4 text-secondary/60" />
+                <span className="text-xs text-secondary/60">0 comments</span>
+              </div>
+              {task.dueDate && new Date(task.dueDate).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) && (
+                  <Badge className="bg-red-100 text-red-700 text-xs">Due Today</Badge>
               )}
             </div>
-            <div className="flex items-center text-xs text-secondary/60">
-              <Calendar className="w-3 h-3 mr-1" />
-              {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <MessageSquare className="w-4 h-4 text-secondary/60" />
-              <span className="text-xs text-secondary/60">0 comments</span>
-            </div>
-            {task.dueDate && new Date(task.dueDate).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) && (
-              <Badge className="bg-red-100 text-red-700 text-xs">Due Today</Badge>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
     );
   };
 
   const TeamMemberCard = ({ member }: { member: any }) => (
-    <Card className="border-accent/20 hover:shadow-md transition-all duration-300">
-      <CardContent className="p-4 text-center">
-        <Avatar className="w-16 h-16 mx-auto mb-3">
-          <AvatarImage src={member.avatar} />
-          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-            {(member.username || member.email)?.slice(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+      <Card className="border-accent/20 hover:shadow-md transition-all duration-300">
+        <CardContent className="p-4 text-center">
+          <Avatar className="w-16 h-16 mx-auto mb-3">
+            <AvatarImage src={member.avatar} />
+            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+              {(member.username || member.email)?.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
 
-        <h3 className="font-semibold text-primary mb-1">{member.username || member.email}</h3>
-        <Badge variant="outline" className="text-xs mb-2">
-          {member.role || 'Team Member'}
-        </Badge>
+          <h3 className="font-semibold text-primary mb-1">{member.username || member.email}</h3>
+          <Badge variant="outline" className="text-xs mb-2">
+            {member.role || 'Team Member'}
+          </Badge>
 
-        <div className="flex items-center justify-center space-x-1 mb-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <span className="text-xs text-secondary/60">Available</span>
-        </div>
+          <div className="flex items-center justify-center space-x-1 mb-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-xs text-secondary/60">Available</span>
+          </div>
 
-        <p className="text-xs text-secondary/60">2 active tasks</p>
-      </CardContent>
-    </Card>
+          <p className="text-xs text-secondary/60">2 active tasks</p>
+        </CardContent>
+      </Card>
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+      <div className="min-h-screen bg-background">
+        <Header />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
-            <div>
-              <h2 className="text-3xl font-bold text-primary">Team Dashboard</h2>
-              <p className="text-secondary/70 mt-1">Manage your tasks and collaborate with your team</p>
-            </div>
-
-            {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row gap-3 mt-4 lg:mt-0">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary/60 w-4 h-4" />
-                <Input
-                  placeholder="Search tasks and projects..."
-                  className="pl-10 w-full sm:w-80"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />              </div>
-              
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header Section */}
+          <div className="mb-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
               <div>
-                <select
-                    className="px-3 py-2 border border-accent/20 rounded-md text-sm bg-background"
-                    value={selectedFilter}
-                    onChange={(e) => setSelectedFilter(e.target.value)}
-                    title="Select task filter"
-                >
-                  <option value="all">All Tasks</option>
-                  <option value="due-today">Due Today</option>
-                  <option value="upcoming">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="overdue">Overdue</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
+                <h2 className="text-3xl font-bold text-primary">Team Dashboard</h2>
+                <p className="text-secondary/70 mt-1">Manage your tasks and collaborate with your team</p>
+              </div>
+
+              {/* Search and Filters */}
+              <div className="flex flex-col sm:flex-row gap-3 mt-4 lg:mt-0">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary/60 w-4 h-4" />
+                  <Input
+                      placeholder="Search tasks and projects..."
+                      className="pl-10 w-full sm:w-80"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <select
+                      className="px-3 py-2 border border-accent/20 rounded-md text-sm bg-background"
+                      value={selectedFilter}
+                      onChange={(e) => setSelectedFilter(e.target.value)}
+                      title="Select task filter"
+                  >
+                    <option value="all">All Tasks</option>
+                    <option value="due-today">Due Today</option>
+                    <option value="upcoming">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="overdue">Overdue</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Analytics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          {/* Analytics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
 
-          <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-red-50 to-red-100">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-red-100 rounded-lg">
-                  <Calendar className="w-6 h-6 text-red-600" />
+            <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-red-50 to-red-100">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-red-100 rounded-lg">
+                    <Calendar className="w-6 h-6 text-red-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-secondary/70">Due Today</p>
+                    <p className="text-2xl font-bold text-primary">{dueToday.length}</p>
+                    <p className="text-xs text-secondary/60">by deadline</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-secondary/70">Due Today</p>
-                  <p className="text-2xl font-bold text-primary">{dueToday.length}</p>
-                  <p className="text-xs text-secondary/60">by deadline</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-accent/20 to-accent/30">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-accent/30 rounded-lg">                  <Calendar className="w-6 h-6 text-secondary" />
+            <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-accent/20 to-accent/30">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-accent/30 rounded-lg">                  <Calendar className="w-6 h-6 text-secondary" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-secondary/70">In Progress</p>
+                    <p className="text-2xl font-bold text-primary">{upcomingTasks.length}</p>
+                    <p className="text-xs text-secondary/60">active tasks</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-secondary/70">In Progress</p>
-                  <p className="text-2xl font-bold text-primary">{upcomingTasks.length}</p>
-                  <p className="text-xs text-secondary/60">active tasks</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>          <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-green-50 to-green-100">
+              </CardContent>
+            </Card>          <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-green-50 to-green-100">
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="p-3 bg-green-100 rounded-lg">
                   <Star className="w-6 h-6 text-green-600" />
                 </div>                <div className="ml-4">
-                  <p className="text-sm font-medium text-secondary/70">Completed</p>
-                  <p className="text-2xl font-bold text-primary">{completedTasks.length}</p>
-                  <p className="text-xs text-secondary/60">completed tasks</p>
-                </div>
+                <p className="text-sm font-medium text-secondary/70">Completed</p>
+                <p className="text-2xl font-bold text-primary">{completedTasks.length}</p>
+                <p className="text-xs text-secondary/60">completed tasks</p>
+              </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-blue-50 to-blue-100">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <Users className="w-6 h-6 text-blue-600" />
+            <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-blue-50 to-blue-100">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <Users className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-secondary/70">Team Size</p>
+                    <p className="text-2xl font-bold text-primary">{teamMembers.length}</p>
+                    <p className="text-xs text-secondary/60">active members</p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-secondary/70">Team Size</p>
-                  <p className="text-2xl font-bold text-primary">{teamMembers.length}</p>
-                  <p className="text-xs text-secondary/60">active members</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-96">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="team">Team</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            {/* Active Project Overview */}
-            <Card className="border-accent/20">
-              <CardHeader>
-                <CardTitle className="text-primary flex items-center">
-                  <Clock className="w-5 h-5 mr-2" />
-                  Active Project
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {activeProject ? (
-                  <div>
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-xl font-semibold text-primary mb-2">{activeProject.projectName}</h3>
-                        <p className="text-secondary/70 mb-3">{activeProject.description}</p>                        <div className="flex items-center space-x-4 text-sm text-secondary/60">
-                          <span>Start: {activeProject.startDate}</span>
-                          <span>•</span>
-                          <span>End: {activeProject.endDate}</span>
-                          <span>•</span>
-                          <span>Duration: {calculateDuration(activeProject.startDate, activeProject.endDate)}</span>
-                        </div>
-                      </div>
-                      <Badge className="bg-green-100 text-green-800">Active</Badge>
-                    </div>                    <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-secondary/70">Project Progress</span>
-                      <span className="text-sm text-primary font-semibold">{projectProgress}%</span>
-                    </div>
-                    <Progress value={projectProgress} max={100} className="h-2 bg-gray-200" />
-                  </div>
-
-                    {teamMembers.length > 0 && (
-                      <div>
-                        <h4 className="font-semibold text-sm text-primary mb-3">Team Members ({teamMembers.length})</h4>
-                        <div className="flex -space-x-2">
-                          {teamMembers.slice(0, 6).map((member: any, index: number) => (
-                            <Avatar key={index} className="w-8 h-8 border-2 border-background">
-                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                {(member.username || member.email)?.slice(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
-                          {teamMembers.length > 6 && (
-                            <div className="w-8 h-8 bg-accent/30 rounded-full border-2 border-background flex items-center justify-center text-xs text-secondary">
-                              +{teamMembers.length - 6}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Users className="w-12 h-12 text-secondary/40 mx-auto mb-3" />
-                    <p className="text-secondary/70">No active project assigned</p>
-                  </div>
-                )}
               </CardContent>
-            </Card>            {/* Quick Task Overview */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="border-accent/20 bg-gradient-to-br from-red-50 to-red-100">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-primary text-lg flex items-center">
-                    <Calendar className="w-5 h-5 mr-2 text-red-500" />
-                    Due Today
+            </Card>
+          </div>
+
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4 lg:w-96">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="tasks">Tasks</TabsTrigger>
+              <TabsTrigger value="team">Team</TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
+              {/* Active Project Overview */}
+              <Card className="border-accent/20">
+                <CardHeader>
+                  <CardTitle className="text-primary flex items-center">
+                    <Clock className="w-5 h-5 mr-2" />
+                    Active Project
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {dueToday.length > 0 ? (
-                    <div className="space-y-3">
-                      {dueToday.slice(0, 3).map((task: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-red-100/80 rounded-lg border border-red-200">
-                          <span className="text-sm font-medium truncate">{task.taskName}</span>
-                          <Badge className="bg-red-200 text-red-800 text-xs">Due Today</Badge>
+                  {activeProject ? (
+                      <div>
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <h3 className="text-xl font-semibold text-primary mb-2">{activeProject.projectName}</h3>
+                            <p className="text-secondary/70 mb-3">{activeProject.description}</p>                        <div className="flex items-center space-x-4 text-sm text-secondary/60">
+                            <span>Start: {activeProject.startDate}</span>
+                            <span>•</span>
+                            <span>End: {activeProject.endDate}</span>
+                            <span>•</span>
+                            <span>Duration: {calculateDuration(activeProject.startDate, activeProject.endDate)}</span>
+                          </div>
+                          </div>
+                          <Badge className="bg-green-100 text-green-800">Active</Badge>
+                        </div>                    <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-secondary/70">Project Progress</span>
+                          <span className="text-sm text-primary font-semibold">{projectProgress}%</span>
                         </div>
-                      ))}
-                      {dueToday.length > 3 && (
-                        <p className="text-xs text-secondary/60 text-center">+{dueToday.length - 3} more</p>
-                      )}
-                    </div>
+                        <Progress value={projectProgress} max={100} className="h-2 bg-gray-200" />
+                      </div>
+
+                        {teamMembers.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-sm text-primary mb-3">Team Members ({teamMembers.length})</h4>
+                              <div className="flex -space-x-2">
+                                {teamMembers.slice(0, 6).map((member: any, index: number) => (
+                                    <Avatar key={index} className="w-8 h-8 border-2 border-background">
+                                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                        {(member.username || member.email)?.slice(0, 2).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                ))}
+                                {teamMembers.length > 6 && (
+                                    <div className="w-8 h-8 bg-accent/30 rounded-full border-2 border-background flex items-center justify-center text-xs text-secondary">
+                                      +{teamMembers.length - 6}
+                                    </div>
+                                )}
+                              </div>
+                            </div>
+                        )}
+                      </div>
                   ) : (
-                    <div className="text-center py-4">
-                      <span className="text-2xl">📅</span>
-                      <p className="text-sm text-secondary/60 mt-1">No tasks due today!</p>
-                    </div>
+                      <div className="text-center py-8">
+                        <Users className="w-12 h-12 text-secondary/40 mx-auto mb-3" />
+                        <p className="text-secondary/70">No active project assigned</p>
+                      </div>
                   )}
                 </CardContent>
-              </Card>
+              </Card>            {/* Quick Task Overview */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="border-accent/20 bg-gradient-to-br from-red-50 to-red-100">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-primary text-lg flex items-center">
+                      <Calendar className="w-5 h-5 mr-2 text-red-500" />
+                      Due Today
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {dueToday.length > 0 ? (
+                        <div className="space-y-3">
+                          {dueToday.slice(0, 3).map((task: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between p-2 bg-red-100/80 rounded-lg border border-red-200">
+                                <span className="text-sm font-medium truncate">{task.taskName}</span>
+                                <Badge className="bg-red-200 text-red-800 text-xs">Due Today</Badge>
+                              </div>
+                          ))}
+                          {dueToday.length > 3 && (
+                              <p className="text-xs text-secondary/60 text-center">+{dueToday.length - 3} more</p>
+                          )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-4">
+                          <span className="text-2xl">📅</span>
+                          <p className="text-sm text-secondary/60 mt-1">No tasks due today!</p>
+                        </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-              <Card className="border-accent/20">
-                <CardHeader className="pb-3">                  <CardTitle className="text-primary text-lg flex items-center">
+                <Card className="border-accent/20">
+                  <CardHeader className="pb-3">                  <CardTitle className="text-primary text-lg flex items-center">
                     <Clock className="w-5 h-5 mr-2 text-blue-500" />
                     In Progress
                   </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {upcomingTasks.length > 0 ? (
-                    <div className="space-y-3">
-                      {upcomingTasks.slice(0, 3).map((task: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
-                          <span className="text-sm font-medium truncate">{task.taskName}</span>
-                          <Badge className="bg-blue-100 text-blue-800 text-xs">Active</Badge>
-                        </div>
-                      ))}
-                      {upcomingTasks.length > 3 && (
-                        <p className="text-xs text-secondary/60 text-center">+{upcomingTasks.length - 3} more</p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <span className="text-2xl">📋</span>
-                      <p className="text-sm text-secondary/60 mt-1">No active tasks</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="border-accent/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-primary text-lg flex items-center">
-                    <CheckSquare className="w-5 h-5 mr-2 text-green-500" />
-                    Completed
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {completedTasks.length > 0 ? (
-                    <div className="space-y-3">
-                      {completedTasks.slice(0, 3).map((task: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
-                          <span className="text-sm font-medium truncate line-through text-secondary/60">{task.taskName}</span>
-                          <Badge className="bg-green-100 text-green-800 text-xs">Done</Badge>
-                        </div>
-                      ))}
-                      {completedTasks.length > 3 && (
-                        <p className="text-xs text-secondary/60 text-center">+{completedTasks.length - 3} more</p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <span className="text-2xl">✅</span>
-                      <p className="text-sm text-secondary/60 mt-1">No completed tasks</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="tasks" className="space-y-6">
-            <Card className="border-accent/20">
-              <CardHeader>
-                <CardTitle className="text-primary">My Tasks</CardTitle>
-                <p className="text-secondary/70">Manage and track your assigned tasks</p>
-              </CardHeader>
-              <CardContent>
-                {filteredTasks.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filteredTasks
-                          .sort((a, b) => {
-                            // Priority mapping: HIGH = 3, MEDIUM = 2, LOW = 1, undefined = 0
-                        const priorityMap: {[key: string]: number} = {
-                          'HIGH': 3,
-                          'MEDIUM': 2,
-                          'LOW': 1
-                        };
-                        // Use taskPriority enum value directly from the TaskDTO
-                        const aPriorityField = a.taskPriority;
-                        const bPriorityField = b.taskPriority;
-
-                        const aPriority = aPriorityField ? priorityMap[aPriorityField.toUpperCase()] || 0 : 0;
-                        const bPriority = bPriorityField ? priorityMap[bPriorityField.toUpperCase()] || 0 : 0;
-                        
-                        // First sort by priority (highest to lowest)
-                        if (bPriority !== aPriority) {
-                          return bPriority - aPriority;
-                        }
-                        
-                        // If priorities are equal, sort by due date (closest first)
-                        if (a.dueDate && b.dueDate) {
-                          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-                        }
-                        
-                        // If one has due date and other doesn't, prioritize the one with due date
-                        if (a.dueDate && !b.dueDate) return -1;
-                        if (!a.dueDate && b.dueDate) return 1;
-                        
-                        return 0;
-                      })
-                      .map((task: any, index: number) => (
-                          <TaskCard key={index} task={task} />
-                      ))
-                    }
-                  </div>
-                ) : (
-                    <div className="text-center py-12">
-                      <CheckSquare className="w-16 h-16 text-secondary/40 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-primary mb-2">No tasks found</h3>
-                      <p className="text-secondary/60">You have no tasks in the active project matching your criteria</p>
-                    </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="team" className="space-y-6">
-            <Card className="border-accent/20">
-              <CardHeader>
-                <CardTitle className="text-primary">Team Members</CardTitle>
-                <p className="text-secondary/70">Collaborate with your project team</p>
-              </CardHeader>
-              <CardContent>
-                {teamMembers.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {teamMembers.map((member: any, index: number) => (
-                      <TeamMemberCard key={index} member={member} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Users className="w-16 h-16 text-secondary/40 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-primary mb-2">No team members</h3>
-                    <p className="text-secondary/60">You haven't been assigned to a project team yet</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="history" className="space-y-6">
-            <Card className="border-accent/20">
-              <CardHeader>
-                <CardTitle className="text-primary">Project History</CardTitle>
-                <p className="text-secondary/70">View your completed and past projects</p>
-              </CardHeader>
-              <CardContent>
-                {history.length > 0 ? (
-                  <div className="space-y-4">
-                    {history.map((project: any, index: number) => (
-                      <Card key={index} className="border-accent/10 bg-gray-50">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h3 className="font-semibold text-primary mb-1">{project.projectName}</h3>
-                              <p className="text-sm text-secondary/70 mb-2">{project.description}</p>                              <div className="flex items-center space-x-4 text-xs text-secondary/60">
-                                <span>Completed: {project.endDate}</span>
-                                <span>•</span>
-                                <span>Duration: {calculateDuration(project.startDate, project.endDate)}</span>
+                  </CardHeader>
+                  <CardContent>
+                    {upcomingTasks.length > 0 ? (
+                        <div className="space-y-3">
+                          {upcomingTasks.slice(0, 3).map((task: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+                                <span className="text-sm font-medium truncate">{task.taskName}</span>
+                                <Badge className="bg-blue-100 text-blue-800 text-xs">Active</Badge>
                               </div>
-                            </div>
-                            <Badge className="bg-gray-100 text-gray-800">Completed</Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Calendar className="w-16 h-16 text-secondary/40 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-primary mb-2">No project history</h3>
-                    <p className="text-secondary/60">Your completed projects will appear here</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                          ))}
+                          {upcomingTasks.length > 3 && (
+                              <p className="text-xs text-secondary/60 text-center">+{upcomingTasks.length - 3} more</p>
+                          )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-4">
+                          <span className="text-2xl">📋</span>
+                          <p className="text-sm text-secondary/60 mt-1">No active tasks</p>
+                        </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-accent/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-primary text-lg flex items-center">
+                      <CheckSquare className="w-5 h-5 mr-2 text-green-500" />
+                      Completed
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {completedTasks.length > 0 ? (
+                        <div className="space-y-3">
+                          {completedTasks.slice(0, 3).map((task: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
+                                <span className="text-sm font-medium truncate line-through text-secondary/60">{task.taskName}</span>
+                                <Badge className="bg-green-100 text-green-800 text-xs">Done</Badge>
+                              </div>
+                          ))}
+                          {completedTasks.length > 3 && (
+                              <p className="text-xs text-secondary/60 text-center">+{completedTasks.length - 3} more</p>
+                          )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-4">
+                          <span className="text-2xl">✅</span>
+                          <p className="text-sm text-secondary/60 mt-1">No completed tasks</p>
+                        </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="tasks" className="space-y-6">
+              <Card className="border-accent/20">
+                <CardHeader>
+                  <CardTitle className="text-primary">My Tasks</CardTitle>
+                  <p className="text-secondary/70">Manage and track your assigned tasks</p>
+                </CardHeader>
+                <CardContent>
+                  {filteredTasks.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredTasks
+                            .sort((a, b) => {
+                              // Priority mapping: HIGH = 3, MEDIUM = 2, LOW = 1, undefined = 0
+                              const priorityMap: {[key: string]: number} = {
+                                'HIGH': 3,
+                                'MEDIUM': 2,
+                                'LOW': 1
+                              };
+                              // Use taskPriority enum value directly from the TaskDTO
+                              const aPriorityField = a.taskPriority;
+                              const bPriorityField = b.taskPriority;
+
+                              const aPriority = aPriorityField ? priorityMap[aPriorityField.toUpperCase()] || 0 : 0;
+                              const bPriority = bPriorityField ? priorityMap[bPriorityField.toUpperCase()] || 0 : 0;
+
+                              // First sort by priority (highest to lowest)
+                              if (bPriority !== aPriority) {
+                                return bPriority - aPriority;
+                              }
+
+                              // If priorities are equal, sort by due date (closest first)
+                              if (a.dueDate && b.dueDate) {
+                                return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                              }
+
+                              // If one has due date and other doesn't, prioritize the one with due date
+                              if (a.dueDate && !b.dueDate) return -1;
+                              if (!a.dueDate && b.dueDate) return 1;
+
+                              return 0;
+                            })
+                            .map((task: any, index: number) => (
+                                <TaskCard key={index} task={task} />
+                            ))
+                        }
+                      </div>
+                  ) : (
+                      <div className="text-center py-12">
+                        <CheckSquare className="w-16 h-16 text-secondary/40 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-primary mb-2">No tasks found</h3>
+                        <p className="text-secondary/60">You have no tasks in the active project matching your criteria</p>
+                      </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="team" className="space-y-6">
+              <Card className="border-accent/20">
+                <CardHeader>
+                  <CardTitle className="text-primary">Team Members</CardTitle>
+                  <p className="text-secondary/70">Collaborate with your project team</p>
+                </CardHeader>
+                <CardContent>
+                  {teamMembers.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {teamMembers.map((member: any, index: number) => (
+                            <TeamMemberCard key={index} member={member} />
+                        ))}
+                      </div>
+                  ) : (
+                      <div className="text-center py-12">
+                        <Users className="w-16 h-16 text-secondary/40 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-primary mb-2">No team members</h3>
+                        <p className="text-secondary/60">You haven't been assigned to a project team yet</p>
+                      </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="history" className="space-y-6">
+              <Card className="border-accent/20">
+                <CardHeader>
+                  <CardTitle className="text-primary">Project History</CardTitle>
+                  <p className="text-secondary/70">View your completed and past projects</p>
+                </CardHeader>
+                <CardContent>
+                  {history.length > 0 ? (
+                      <div className="space-y-4">
+                        {history.map((project: any, index: number) => (
+                            <Card key={index} className="border-accent/10 bg-gray-50">
+                              <CardContent className="p-4">
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <h3 className="font-semibold text-primary mb-1">{project.projectName}</h3>
+                                    <p className="text-sm text-secondary/70 mb-2">{project.description}</p>                              <div className="flex items-center space-x-4 text-xs text-secondary/60">
+                                    <span>Completed: {project.endDate}</span>
+                                    <span>•</span>
+                                    <span>Duration: {calculateDuration(project.startDate, project.endDate)}</span>
+                                  </div>
+                                  </div>
+                                  <Badge className="bg-gray-100 text-gray-800">Completed</Badge>
+                                </div>
+                              </CardContent>
+                            </Card>
+                        ))}
+                      </div>
+                  ) : (
+                      <div className="text-center py-12">
+                        <Calendar className="w-16 h-16 text-secondary/40 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-primary mb-2">No project history</h3>
+                        <p className="text-secondary/60">Your completed projects will appear here</p>
+                      </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-    </div>
   );
 };
 
