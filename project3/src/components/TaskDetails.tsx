@@ -22,7 +22,7 @@ interface TaskDetailsProps {
 const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canEdit }) => {
   const [editingTask, setEditingTask] = useState(false);
   const [taskData, setTaskData] = useState({
-    title: task.title || '',
+    title: task.taskName || task.title || '',
     description: task.description || '',
     status: task.status || 'in_progress',
     priority: task.priority || 'medium',
@@ -47,10 +47,16 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
 
   const handleUpdateTask = async () => {
     if (!canEdit) return;
-    
+
     setLoading(true);
     try {
-      await taskAPI.update(task.id, taskData);
+      // Make sure we're sending the correct property name that the API expects
+      const updateData = {
+        ...taskData,
+        taskName: taskData.title // Map title back to taskName if that's what the API expects
+      };
+
+      await taskAPI.update(task.id, updateData);
       toast({
         title: "Success!",
         description: "Task updated successfully."
@@ -131,14 +137,13 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };  const getStatusColor = (status: string) => {
-    const statusLower = status.toLowerCase();
-    if (statusLower === 'completed' || statusLower === 'complete') {
+    if (status === 'COMPLETED') {
       return 'bg-green-100 text-green-800 border-green-200';
-    } else if (statusLower === 'in-progress' || statusLower === 'in_progress' || statusLower === 'inprogress') {
+    } else if (status === 'IN_PROGRESS') {
       return 'bg-blue-100 text-blue-800 border-blue-200';
-    } else if (statusLower === 'overdue') {
+    } else if (status === 'OVERDUE') {
       return 'bg-red-100 text-red-800 border-red-200';
-    } else if (statusLower === 'to-do' || statusLower === 'to_do' || statusLower === 'todo') {
+    } else if (status === 'TO_DO') {
       return 'bg-purple-100 text-purple-800 border-purple-200';
     }
     return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -231,7 +236,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
                 ) : (
                   <>
                     <div>
-                      <h3 className="font-medium text-primary">{task.title}</h3>
+                      <h3 className="font-medium text-primary">{task.taskName || task.title}</h3>
                       <p className="text-secondary/70 text-sm mt-1">{task.description || 'No description available'}</p>
                     </div>
                     <div className="flex items-center text-sm text-secondary/60">
