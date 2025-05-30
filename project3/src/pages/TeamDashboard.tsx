@@ -12,6 +12,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { projectAPI, taskAPI } from '@/utils/api';
 import { toast } from '@/hooks/use-toast';
 
+// Define enums matching the Java backend
+enum TaskStatus {
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  OVERDUE = 'OVERDUE',
+  CANCELLED = 'CANCELLED'
+}
+
+enum TaskPriority {
+  HIGH = 'HIGH',
+  MEDIUM = 'MEDIUM',
+  LOW = 'LOW'
+}
+
 const TeamDashboard = () => {
   const { user } = useAuth();  const [activeProject, setActiveProject] = useState<any>(null);
   const [myTasks, setMyTasks] = useState<any[]>([]);
@@ -25,61 +39,38 @@ const TeamDashboard = () => {
   const [loadingTeamMembers, setLoadingTeamMembers] = useState(false);
   const [projectTasks, setProjectTasks] = useState<any[]>([]);
   const [projectProgress, setProjectProgress] = useState(0);
-  
   // Helper function to check if a task is overdue - moved to the top
   const isTaskOverdue = (task: any) => {
     if (!task.dueDate) return false;
     const isDueDate = new Date(task.dueDate) < new Date();
-    const isNotCompleted = !task.taskStatus || 
-                          (task.taskStatus.toLowerCase() !== 'completed' && 
-                           task.taskStatus.toLowerCase() !== 'complete' && 
-                           task.taskStatus.toLowerCase() !== 'completed_task');
+    // Use exact enum values from TaskStatus (COMPLETED)
+    const isNotCompleted = task.taskStatus !== 'COMPLETED';
     return isDueDate && isNotCompleted;
   };
-  
-  // Helper function for task priority color
+    // Helper function for task priority color
   const getTaskPriorityColor = (priority: string) => {
-    switch (priority?.toLowerCase()) {
+    switch (priority?.toUpperCase()) {
       case 'HIGH': return 'bg-red-100 text-red-800 border-red-200';
-      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'LOW': return 'bg-green-100 text-green-800 border-green-200';
+      case 'MEDIUM': return 'bg-green-100 text-green-800 border-green-200';
+      case 'LOW': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
-  
-  // Helper function for task status color
+    // Helper function for task status color
   const getStatusColor = (status: string) => {
-    // Check if task is overdue first
-    if (status && status.toLowerCase() === 'overdue') {
-      return 'bg-red-100 text-red-800';
+    // Use exact enum values from TaskStatus
+    switch (status) {
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-800';
+      case 'IN_PROGRESS':
+        return 'bg-blue-100 text-blue-800';
+      case 'OVERDUE':
+        return 'bg-red-100 text-red-800';
+      case 'CANCELLED':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
-    
-    const lowercaseStatus = status?.toLowerCase?.() || '';
-    
-    // Handle various forms of "completed" status
-    if (lowercaseStatus === 'completed' || 
-        lowercaseStatus === 'complete' || 
-        lowercaseStatus === 'completed_task') {
-      return 'bg-green-100 text-green-800';
-    }
-    
-    // Handle various forms of "in progress" status
-    if (lowercaseStatus === 'in_progress' || 
-        lowercaseStatus === 'inprogress' || 
-        lowercaseStatus === 'in-progress' || 
-        lowercaseStatus === 'progress') {
-      return 'bg-blue-100 text-blue-800';
-    }
-    
-    // Handle various forms of "overdue" status
-    if (lowercaseStatus === 'overdue' || 
-        lowercaseStatus === 'late' || 
-        lowercaseStatus === 'delayed') {
-      return 'bg-red-100 text-red-800';
-    }
-    
-    // Default case
-    return 'bg-gray-100 text-gray-800';
   };
 
   // Fetch active project
@@ -93,63 +84,12 @@ const TeamDashboard = () => {
             setActiveProject(null);
             console.error('Active project fetch failed:', err);
           });
-          
-      // Fetch tasks
-      taskAPI.search({ assignedTo_UserId: user.id })
-        .then(tasks => {
-          setMyTasks(tasks);
-          
-          const today = new Date();
-          const todayStr = today.toISOString().slice(0, 10);
-          
-          // Filter tasks due today (by deadline date)
-          setDueToday(tasks.filter((t: any) => {
-            return t.dueDate && t.dueDate.slice(0, 10) === todayStr;
-          }));
-          
-          // Filter overdue tasks (past due date and not completed)
-          setOverdueTasks(tasks.filter((t: any) => {
-            // Check if task is overdue (past due date and not completed)
-            if (!t.dueDate) return false;
-            const isDueDate = new Date(t.dueDate) < new Date();
-            const status = t.taskStatus?.toLowerCase?.() || '';
-            const isNotCompleted = status !== 'completed' && 
-                                   status !== 'complete' && 
-                                   status !== 'completed_task';
-            return isDueDate && isNotCompleted;
-          }));
-          
-          // Filter in-progress tasks
-          setUpcomingTasks(tasks.filter((t: any) => {
-            const status = t.taskStatus?.toLowerCase?.() || '';
-            // Match "in progress" status in various forms
-            return status === 'in_progress' || 
-                   status === 'inprogress' || 
-                   status === 'in-progress' ||
-                   status === 'progress';
-          }));
-          
-          // Filter completed tasks
-          setCompletedTasks(tasks.filter((t: any) => {
-            // Check task status - use case insensitive comparison
-            const status = t.taskStatus?.toLowerCase?.() || '';
-            // Match "completed" status in various forms
-            return status === 'completed' || 
-                   status === 'complete' || 
-                   status === 'completed_task' ||
-                   status === 'done';
-          }));          
-          // Log task categories for debugging
-          console.log('FINAL Due today tasks:', dueToday.length);
-          console.log('FINAL Overdue tasks:', overdueTasks.length);
-          console.log('FINAL In Progress tasks:', upcomingTasks.length);
-          console.log('FINAL Completed tasks:', completedTasks.length);
-          
-          // Log all unique task statuses to help debug
-          const uniqueStatuses = [...new Set(tasks.map((t: any) => t.taskStatus))];
-          console.log('All task statuses in data:', uniqueStatuses);
-        });
+    }
+  }, [user]);
 
+  // Fetch tasks and project history
+  useEffect(() => {
+    if (user) {
       // Fetch project history
       projectAPI.getCompletedProjectsForUser(user.id)
         .then(setHistory)
@@ -157,8 +97,10 @@ const TeamDashboard = () => {
           setHistory([]);
           console.error('Completed projects fetch failed:', err);
         });
-    }  }, [user]);
-    // Fetch team members when active project changes
+    }
+  }, [user]);
+
+  // Fetch team members when active project changes
   useEffect(() => {
     if (activeProject && activeProject.projectId) {
       setLoadingTeamMembers(true);
@@ -178,6 +120,61 @@ const TeamDashboard = () => {
     }
   }, [activeProject]);
 
+  // Fetch tasks for the active project assigned to the user
+  useEffect(() => {
+    if (user && activeProject && activeProject.projectId) {
+      console.log('Fetching tasks for active project and user:', activeProject.projectId, user.id);      
+      taskAPI.search({ projectId: activeProject.projectId, assignedTo_UserId: user.id })
+        .then(tasks => {
+          console.log('Tasks for active project loaded:', tasks.length);
+          if (tasks.length > 0) {
+            console.log('Sample task structure:', tasks[0]);
+          }
+          setMyTasks(tasks);
+          
+          // Re-filter task categories based on the new myTasks data
+          const today = new Date();
+          const todayStr = today.toISOString().slice(0, 10);
+          
+          setDueToday(tasks.filter((t: any) => {
+            return t.dueDate && t.dueDate.slice(0, 10) === todayStr;
+          }));
+          
+          setOverdueTasks(tasks.filter((t: any) => {
+            return t.taskStatus === 'OVERDUE' || isTaskOverdue(t);
+          }));
+          
+          setUpcomingTasks(tasks.filter((t: any) => {
+            return t.taskStatus === 'IN_PROGRESS';
+          }));
+          
+          setCompletedTasks(tasks.filter((t: any) => {
+            return t.taskStatus === 'COMPLETED';
+          }));
+          
+          const uniqueStatuses = [...new Set(tasks.map((t: any) => t.taskStatus))];
+          console.log('All task statuses in active project data:', uniqueStatuses);
+          
+        })
+        .catch(err => {
+          console.error('Failed to fetch tasks for active project:', err);
+          setMyTasks([]);
+          setDueToday([]);
+          setOverdueTasks([]);
+          setUpcomingTasks([]);
+          setCompletedTasks([]);
+        });
+    } else if (user && !activeProject) {
+      // Clear tasks if no active project is assigned to the user
+      setMyTasks([]);
+      setDueToday([]);
+      setOverdueTasks([]);
+      setUpcomingTasks([]);
+      setCompletedTasks([]);
+      console.log('No active project, clearing tasks.');
+    }
+  }, [activeProject, user]); // Depend on activeProject and user
+  
   // Fetch project tasks and calculate progress when active project changes
   useEffect(() => {
     if (activeProject && activeProject.projectId) {
@@ -186,15 +183,9 @@ const TeamDashboard = () => {
         .then(tasks => {
           console.log('Project tasks loaded:', tasks.length, tasks);
           setProjectTasks(tasks);
-          
-          // Calculate project progress
+            // Calculate project progress
           if (tasks.length > 0) {
-            const completedTasks = tasks.filter((task: any) => {
-              const status = task.taskStatus?.toLowerCase?.() || '';
-              return status === 'completed' || 
-                     status === 'complete' || 
-                     status === 'completed_task';
-            });
+            const completedTasks = tasks.filter((task: any) => task.taskStatus === 'COMPLETED');
             const progressPercentage = Math.round((completedTasks.length / tasks.length) * 100);
             setProjectProgress(progressPercentage);
             console.log(`Project progress: ${completedTasks.length}/${tasks.length} = ${progressPercentage}%`);
@@ -212,12 +203,11 @@ const TeamDashboard = () => {
       setProjectTasks([]);
       setProjectProgress(0);
     }
-  }, [activeProject]);
+  }, [activeProject]);  // Debug task filtering logic before filtering
   
   const filteredTasks = myTasks.filter(task => {
     const matchesSearch = task.taskName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          task.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const taskStatus = task.taskStatus?.toLowerCase() || '';
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
     const dueDate = task.dueDate ? task.dueDate.slice(0, 10) : null;
@@ -228,23 +218,16 @@ const TeamDashboard = () => {
     if (selectedFilter === 'all') return matchesSearch;
     if (selectedFilter === 'due-today') return dueDate === todayStr && matchesSearch; // Filter by deadline date
     if (selectedFilter === 'upcoming') {
-      // Filter by IN_PROGRESS status (case-insensitive and handling variations)
-      return (taskStatus === 'in_progress' || 
-              taskStatus === 'inprogress' || 
-              taskStatus === 'in-progress') && 
-              !isOverdue && // Not overdue
-              matchesSearch;
+      // Filter by IN_PROGRESS status (exact enum value)
+      return task.taskStatus === 'IN_PROGRESS' && !isOverdue && matchesSearch;
     }
     if (selectedFilter === 'completed') {
-      // Filter by COMPLETED status (case-insensitive and handling variations)
-      return (taskStatus === 'completed' || 
-              taskStatus === 'complete' || 
-              taskStatus === 'completed_task') && 
-              matchesSearch;
+      // Filter by COMPLETED status (exact enum value)
+      return task.taskStatus === 'COMPLETED' && matchesSearch;
     }
     if (selectedFilter === 'overdue') {
-      // Filter by overdue (past due date and not completed)
-      return isOverdue && matchesSearch;
+      // Filter by overdue (either has OVERDUE status or is past due and not completed)
+      return (task.taskStatus === 'OVERDUE' || isOverdue) && matchesSearch;
     }
 
     return matchesSearch;
@@ -254,14 +237,25 @@ const TeamDashboard = () => {
     try {
       // Find the current task
       const task = myTasks.find(t => t.taskId === taskId);
-      
+
+      // Add check for already completed tasks with past deadlines
+      if (task && task.taskStatus === TaskStatus.COMPLETED && task.dueDate && new Date(task.dueDate) < new Date()) {
+        toast({
+          title: "Task Already Completed",
+          description: "This task was completed before its deadline passed and cannot be changed.",
+          variant: "default",
+        });
+        return; // Prevent further execution
+      }
+
       // Check if task is overdue (past due date and not completed)
       if (task && task.dueDate) {
         const isDueDate = new Date(task.dueDate) < new Date();
-        const isNotCompleted = !task.taskStatus || task.taskStatus.toLowerCase() !== 'completed';
+        // Using enum value directly from TaskStatus.COMPLETED
+        const isNotCompleted = task.taskStatus !== 'COMPLETED';
         
         if (isDueDate && isNotCompleted) {
-          // Set status to OVERDUE instead
+          // Set status to TaskStatus.OVERDUE
           await taskAPI.update(taskId, { taskStatus: 'OVERDUE' });
           
           toast({
@@ -303,32 +297,21 @@ const TeamDashboard = () => {
       if (updatedTask) {
         updatedTask.taskStatus = newStatus;
       }
-        // Update filtered lists
+        // Update filtered lists      // Update due today tasks
+      const today = new Date();
+      const todayStr = today.toISOString().slice(0, 10);
       setDueToday(updatedTasks.filter(t => {
-        // Check if task is overdue (past due date and not completed)
-        if (!t.dueDate) return false;
-        const isDueDate = new Date(t.dueDate) < new Date();
-        const status = t.taskStatus?.toLowerCase?.() || '';
-        const isNotCompleted = status !== 'completed' && 
-                             status !== 'complete' && 
-                             status !== 'completed_task';
-        return isDueDate && isNotCompleted;
+        return t.dueDate && t.dueDate.slice(0, 10) === todayStr;
       }));
       
+      // Update in-progress tasks - use exact enum values
       setUpcomingTasks(updatedTasks.filter(t => {
-        const status = t.taskStatus?.toLowerCase?.() || '';
-        return status === 'in_progress' || 
-               status === 'inprogress' || 
-               status === 'in-progress' ||
-               status === 'progress';
+        return t.taskStatus === 'IN_PROGRESS';
       }));
       
+      // Update completed tasks - use exact enum values
       setCompletedTasks(updatedTasks.filter(t => {
-        const status = t.taskStatus?.toLowerCase?.() || '';
-        return status === 'completed' || 
-               status === 'complete' || 
-               status === 'completed_task' ||
-               status === 'done';
+        return t.taskStatus === 'COMPLETED';
       }));
       
       toast({
@@ -353,24 +336,25 @@ const TeamDashboard = () => {
         <CardContent className="p-4">
           <div className="flex items-start justify-between mb-3">
             <h3 className="font-semibold text-primary line-clamp-2">{task.taskName}</h3>
-            <Badge className={`text-xs ${getTaskPriorityColor(task.priority)} ml-2`}>
-              {task.priority || 'Medium'}
+            <Badge className={`text-xs ${getTaskPriorityColor(task.taskPriority)} ml-2`}>
+                {task.taskPriority === 'HIGH' ? 'High' :
+                task.taskPriority === 'MEDIUM' ? 'Medium' :
+                task.taskPriority === 'LOW' ? 'Low' : 'Medium'}
             </Badge>
+
           </div>
 
-          <p className="text-sm text-secondary/70 mb-3 line-clamp-2">{task.description}</p>
+          <p className="text-sm text-secondary/70 mb-3 line-clamp-3">{task.description || 'No description available'}</p>
 
           <div className="flex items-center justify-between mb-3">
-            <div className="relative">              <Badge 
+            <div className="relative">              <Badge
                 className={`${getStatusColor(task.taskStatus)} cursor-pointer`}
                 onClick={() => {
-                  // Check if task is overdue before allowing status change
-                  const isOverdue = isTaskOverdue(task);
-                  
-                  if (isOverdue) {
+                  // Only allow status changes for tasks that aren't OVERDUE or CANCELLED
+                  if (task.taskStatus === 'OVERDUE' || task.taskStatus === 'CANCELLED') {
                     toast({
                       title: "Cannot Change Status",
-                      description: "This task is overdue and its status cannot be changed unless the deadline is extended.",
+                      description: `This task is ${task.taskStatus === 'OVERDUE' ? 'overdue' : 'cancelled'} and its status cannot be changed.`,
                       variant: "destructive"
                     });
                   } else {
@@ -378,29 +362,37 @@ const TeamDashboard = () => {
                   }
                 }}
               >
-                {isTaskOverdue(task) ? 'Overdue' : (task.taskStatus?.replace('_', ' ') || 'In Progress')} ▾
+                {task.taskStatus === 'IN_PROGRESS' ? 'In Progress' : 
+                 task.taskStatus === 'COMPLETED' ? 'Completed' : 
+                 task.taskStatus === 'OVERDUE' ? 'Overdue' :
+                 task.taskStatus === 'CANCELLED' ? 'Cancelled' : 'In Progress'}
+                {task.taskStatus !== 'OVERDUE' && task.taskStatus !== 'CANCELLED' && ' ▾'}
               </Badge>
-              
-              {showStatusOptions && (
+                {showStatusOptions && (
                 <div className="absolute top-full left-0 mt-1 bg-white shadow-lg rounded-md p-1 z-10 border border-accent/20">
-                  <div 
-                    className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
-                    onClick={() => {
-                      updateTaskStatus(task.taskId, 'IN_PROGRESS');
-                      setShowStatusOptions(false);
-                    }}
-                  >
-                    In Progress
-                  </div>
-                  <div 
-                    className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
-                    onClick={() => {
-                      updateTaskStatus(task.taskId, 'COMPLETED');
-                      setShowStatusOptions(false);
-                    }}
-                  >
-                    Completed
-                  </div>
+                  {/* Only show status options that make sense based on current status */}
+                  {task.taskStatus !== 'IN_PROGRESS' && (
+                    <div 
+                      className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
+                      onClick={() => {
+                        updateTaskStatus(task.taskId, 'IN_PROGRESS');
+                        setShowStatusOptions(false);
+                      }}
+                    >
+                      In Progress
+                    </div>
+                  )}
+                  {task.taskStatus !== 'COMPLETED' && (
+                    <div 
+                      className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
+                      onClick={() => {
+                        updateTaskStatus(task.taskId, 'COMPLETED');
+                        setShowStatusOptions(false);
+                      }}
+                    >
+                      Completed
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -413,7 +405,7 @@ const TeamDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <MessageSquare className="w-4 h-4 text-secondary/60" />
-              <span className="text-xs text-secondary/60">3 comments</span>
+              <span className="text-xs text-secondary/60">0 comments</span>
             </div>
             {task.dueDate && new Date(task.dueDate).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) && (
               <Badge className="bg-red-100 text-red-700 text-xs">Due Today</Badge>
@@ -581,12 +573,12 @@ const TeamDashboard = () => {
                       </div>
                       <Badge className="bg-green-100 text-green-800">Active</Badge>
                     </div>                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-secondary/70">Project Progress</span>
-                        <span className="text-sm text-primary font-semibold">{projectProgress}%</span>
-                      </div>
-                      <Progress value={projectProgress} className="h-2" />
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-secondary/70">Project Progress</span>
+                      <span className="text-sm text-primary font-semibold">{projectProgress}%</span>
                     </div>
+                    <Progress value={projectProgress} className="h-2" />
+                  </div>
 
                     {teamMembers.length > 0 && (
                       <div>
@@ -627,7 +619,6 @@ const TeamDashboard = () => {
                 <CardContent>
                   {dueToday.length > 0 ? (
                     <div className="space-y-3">
-                      
                       {dueToday.slice(0, 3).map((task: any, index: number) => (
                         <div key={index} className="flex items-center justify-between p-2 bg-red-100/80 rounded-lg border border-red-200">
                           <span className="text-sm font-medium truncate">{task.taskName}</span>
@@ -711,8 +702,8 @@ const TeamDashboard = () => {
               <CardHeader>
                 <CardTitle className="text-primary">My Tasks</CardTitle>
                 <p className="text-secondary/70">Manage and track your assigned tasks</p>
-              </CardHeader>
-              <CardContent>                {filteredTasks.length > 0 ? (
+              </CardHeader>              <CardContent>
+                {filteredTasks.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">                    {filteredTasks
                       .sort((a, b) => {
                         // Priority mapping: HIGH = 3, MEDIUM = 2, LOW = 1, undefined = 0
@@ -721,8 +712,12 @@ const TeamDashboard = () => {
                           'MEDIUM': 2,
                           'LOW': 1
                         };
-                        const aPriority = a.priority ? priorityMap[a.priority.toUpperCase()] || 0 : 0;
-                        const bPriority = b.priority ? priorityMap[b.priority.toUpperCase()] || 0 : 0;
+                        // Use taskPriority enum value directly from the TaskDTO
+                        const aPriorityField = a.taskPriority;
+                        const bPriorityField = b.taskPriority;
+
+                        const aPriority = aPriorityField ? priorityMap[aPriorityField.toUpperCase()] || 0 : 0;
+                        const bPriority = bPriorityField ? priorityMap[bPriorityField.toUpperCase()] || 0 : 0;
                         
                         // First sort by priority (highest to lowest)
                         if (bPriority !== aPriority) {

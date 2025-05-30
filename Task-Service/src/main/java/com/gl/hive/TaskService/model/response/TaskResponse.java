@@ -21,6 +21,8 @@ public class TaskResponse {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime dueDate;
     private String projectName;
+    private String description;
+    private String taskPriority;
     private TaskStatus taskStatus;
     private Map<String, String> assignedUsers;
 

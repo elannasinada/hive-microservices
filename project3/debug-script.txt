@@ -1,0 +1,8 @@
+// Add these console.log statements to the TeamDashboard.tsx file:
+
+// 1. Add at the beginning of the filteredTasks function
+console.log('filterTasks - myTasks length:', myTasks.length);
+console.log('filterTasks - activeProject:', activeProject?.projectId);
+
+// 2. Add before returning filteredTasks.length > 0 check in the Tasks tab
+console.log('Rendering Tasks tab with filteredTasks:', filteredTasks.length);

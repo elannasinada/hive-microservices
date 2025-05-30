@@ -32,12 +32,14 @@ const Header = () => {
                                 >
                                     Dashboard
                                 </Link>
-                                <Link
+                                {user?.roles.includes('TEAM_MEMBER') && (
+                                    <Link
                                     to="/tasks"
                                     className="text-secondary hover:text-primary transition-colors font-medium"
                                 >
                                     Tasks
                                 </Link>
+                                )}
                                 {user?.roles.includes('ADMIN') && (
                                     <Link
                                         to="/admin"
@@ -46,14 +48,14 @@ const Header = () => {
                                         Admin Panel
                                     </Link>
                                 )}
-                                {user?.roles.includes('PROJECT_LEADER') && (
-                                    <Link
-                                        to="/leader"
-                                        className="text-secondary hover:text-primary transition-colors font-medium"
-                                    >
-                                        Project Leader
-                                    </Link>
-                                )}
+                                {/*{user?.roles.includes('PROJECT_LEADER') && (*/}
+                                {/*    <Link*/}
+                                {/*        to="/leader"*/}
+                                {/*        className="text-secondary hover:text-primary transition-colors font-medium"*/}
+                                {/*    >*/}
+                                {/*        Project Leader*/}
+                                {/*    </Link>*/}
+                                {/*)}*/}
                             </nav>
                         )}
                     </div>

@@ -127,6 +127,8 @@ public class TaskUtils {
                 .taskName(task.getTaskName())
                 .projectName(project != null ? project.getProjectName() : "N/A") // Use "N/A" if project is null
                 .taskStatus(task.getTaskStatus())
+                .taskPriority(String.valueOf(task.getTaskPriority()))
+                .description(task.getDescription())
                 .dueDate(task.getDueDate())
                 .assignedUsers(assignededUsersMap)
                 .build();
