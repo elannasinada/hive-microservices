@@ -44,6 +44,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [draggedTask, setDraggedTask] = useState<any>(null);
   const [viewingTask, setViewingTask] = useState<any>(null);
 
+  // Add debug logging
+  console.log('🔍 KanbanBoard render - canEdit:', canEdit, 'tasks count:', tasks.length);
+
   const columns = [
     { id: 'overdue', title: 'Overdue', count: tasks.filter(t => t.taskStatus === 'OVERDUE' || isTaskOverdue(t)).length },
     { id: 'to-do', title: 'To Do', count: tasks.filter(t => t.taskStatus === 'TO_DO' && !isTaskOverdue(t)).length },
@@ -71,14 +74,26 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   };
 
   const handleDragStart = (e: React.DragEvent, task: any) => {
+    console.log('🚀 DRAG START - Task:', task.taskName, 'ID:', task.taskId);
+
     // Prevent dragging overdue tasks
     if (task.taskStatus === 'OVERDUE' || isTaskOverdue(task)) {
+      console.log('❌ Preventing drag - task is overdue');
       e.preventDefault();
       return;
     }
 
+    if (!canEdit) {
+      console.log('❌ Preventing drag - canEdit is false');
+      e.preventDefault();
+      return;
+    }
+
+    console.log('✅ Setting dragged task and data transfer');
     setDraggedTask(task);
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', task.taskId || task.id);
+    e.dataTransfer.setData('application/json', JSON.stringify(task));
 
     // Add visual feedback
     const dragElement = e.currentTarget as HTMLElement;
@@ -86,6 +101,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
+    console.log('🏁 DRAG END');
     // Reset visual feedback
     const dragElement = e.currentTarget as HTMLElement;
     dragElement.style.opacity = '1';
@@ -95,45 +111,77 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault(); // Allow drop by preventing default
     e.dataTransfer.dropEffect = 'move';
+    // console.log('📍 Drag over column'); // Uncomment if needed for debugging
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault(); // Prevent default behavior
+    e.preventDefault();
     const dropZone = e.currentTarget as HTMLElement;
-    dropZone.classList.add('ring-2', 'ring-primary/50', 'ring-offset-2'); // Add visual feedback
+    dropZone.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'; // Blue tint
+    console.log('➡️ Drag enter column');
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault(); // Prevent default behavior
+    e.preventDefault();
     const dropZone = e.currentTarget as HTMLElement;
-    dropZone.classList.remove('ring-2', 'ring-primary/50', 'ring-offset-2'); // Remove visual feedback
+    dropZone.style.backgroundColor = ''; // Remove tint
+    console.log('⬅️ Drag leave column');
   };
 
   const handleDrop = (e: React.DragEvent, newColumnId: string) => {
-    e.preventDefault(); // Prevent default behavior
+    e.preventDefault();
+    console.log('🎯 DROP on column:', newColumnId);
 
     const dropZone = e.currentTarget as HTMLElement;
-    dropZone.classList.remove('ring-2', 'ring-primary/50', 'ring-offset-2'); // Remove visual feedback
+    dropZone.style.backgroundColor = ''; // Remove visual feedback
 
-    if (!draggedTask || !canEdit) {
+    // Try to get task data from dataTransfer
+    let taskData = null;
+    try {
+      const jsonData = e.dataTransfer.getData('application/json');
+      if (jsonData) {
+        taskData = JSON.parse(jsonData);
+        console.log('📦 Got task from dataTransfer:', taskData.taskName);
+      }
+    } catch (err) {
+      console.log('⚠️ Could not parse JSON from dataTransfer, using draggedTask state');
+    }
+
+    const taskToMove = taskData || draggedTask;
+    console.log('📋 Task to move:', taskToMove?.taskName);
+
+    if (!taskToMove) {
+      console.log('❌ No task to move');
       setDraggedTask(null);
       return;
     }
 
-    if (draggedTask.taskStatus === 'OVERDUE' || isTaskOverdue(draggedTask)) {
-      setDraggedTask(null); // Prevent dropping overdue tasks
+    if (!canEdit) {
+      console.log('❌ Cannot edit - dropping cancelled');
+      setDraggedTask(null);
+      return;
+    }
+
+    if (taskToMove.taskStatus === 'OVERDUE' || isTaskOverdue(taskToMove)) {
+      console.log('❌ Cannot move overdue task');
+      setDraggedTask(null);
       return;
     }
 
     const newTaskStatus = getTaskStatusFromColumn(newColumnId);
-    const currentTaskStatus = draggedTask.taskStatus;
+    const currentTaskStatus = taskToMove.taskStatus;
+    console.log('🔄 Status change:', currentTaskStatus, '->', newTaskStatus);
 
     if (currentTaskStatus !== newTaskStatus) {
-      onStatusChange(draggedTask.taskId || draggedTask.id, newTaskStatus); // Update task status
+      onStatusChange(taskToMove.taskId || taskToMove.id, newTaskStatus);
+      console.log('✅ Status changed successfully');
+    } else {
+      console.log('ℹ️ No status change needed');
     }
 
     setDraggedTask(null);
   };
+
   // Helper function to convert column ID to TaskStatus enum value
   const getTaskStatusFromColumn = (columnId: string) => {
     switch (columnId) {
@@ -181,28 +229,43 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       }
     };
 
-    const handleCardClick = (e: React.MouseEvent) => {
-      // Don't open task details if we're in the middle of dragging
-      if (!isDragging) {
-        setViewingTask(task);
-      }
+    const handleDetailsClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      console.log('🔍 Opening task details for:', task.taskName);
+      setViewingTask(task);
     };
 
     const handleTaskDragStart = (e: React.DragEvent) => {
+      console.log('🎬 TaskCard dragStart - Task:', task.taskName);
+      console.log('🎬 canEdit:', canEdit, 'overdue:', overdue);
+
       // Prevent dragging overdue tasks
       if (overdue) {
+        console.log('❌ Preventing drag - task is overdue');
         e.preventDefault();
-        return;
+        return false;
       }
 
+      if (!canEdit) {
+        console.log('❌ Preventing drag - cannot edit');
+        e.preventDefault();
+        return false;
+      }
+
+      console.log('✅ Starting drag for task card...');
       setIsDragging(true);
       handleDragStart(e, task);
+      return true;
     };
 
     const handleTaskDragEnd = (e: React.DragEvent) => {
+      console.log('🎬 TaskCard dragEnd');
       setIsDragging(false);
       handleDragEnd(e);
     };
+
+    const isDraggable = canEdit && !overdue;
+    console.log(`🎯 Task "${task.taskName}" - draggable: ${isDraggable}, canEdit: ${canEdit}, overdue: ${overdue}`);
 
     return (
         <Card
@@ -211,13 +274,14 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     ? 'cursor-not-allowed opacity-75'
                     : isDragging
                         ? 'cursor-grabbing shadow-lg scale-105'
-                        : 'cursor-pointer hover:shadow-xl hover:scale-[1.02] hover:cursor-grab'
+                        : isDraggable
+                            ? 'hover:shadow-xl hover:scale-[1.02] cursor-grab'
+                            : 'cursor-default'
             }`}
-            draggable={canEdit && !overdue}
+            draggable={isDraggable}
             onDragStart={handleTaskDragStart}
             onDragEnd={handleTaskDragEnd}
-            onClick={handleCardClick}
-            title={overdue ? 'Overdue tasks cannot be moved' : 'Click to view details, drag to move'}
+            title={overdue ? 'Overdue tasks cannot be moved' : isDraggable ? 'Drag to move between columns' : 'Cannot edit tasks'}
         >
           <CardContent className="p-4">
             <div className="flex items-start justify-between mb-3">
@@ -226,10 +290,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   variant="ghost"
                   size="sm"
                   className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setViewingTask(task);
-                  }}
+                  onClick={handleDetailsClick}
+                  title="Click to view task details"
               >
                 <MoreHorizontal className="w-3 h-3" />
               </Button>
@@ -302,7 +364,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {columns.map((column) => (
             <div
                 key={column.id}
-                className={`rounded-lg p-4 min-h-[500px] border border-gray-200 transition-all duration-200 ${
+                className={`rounded-lg p-4 min-h-[500px] border-2 border-dashed border-gray-200 transition-all duration-200 ${
                     column.id === 'overdue' ? 'bg-red-50/50' :
                         column.id === 'to-do' ? 'bg-purple-50/50' :
                             column.id === 'in-progress' ? 'bg-blue-50/50' :

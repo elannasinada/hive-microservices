@@ -43,6 +43,8 @@ const TaskManagement = () => {
 
   const canCreateTasks = user && (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'));
 
+  const canEditTasks = user && user.roles.length > 0; // Any logged-in user can edit existing tasks
+
   useEffect(() => {
     loadData();
   }, [user]);
@@ -456,7 +458,7 @@ const TaskManagement = () => {
               onTaskUpdate={handleTaskUpdate}
               onStatusChange={handleTaskStatusChange}
               projects={projects}
-              canEdit={canCreateTasks}
+              canEdit={canEditTasks}
             />
           </TabsContent>
 
