@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { taskAPI, projectAPI } from '@/utils/api';
@@ -83,6 +82,39 @@ const TaskManagement = () => {
     }
   };
 
+  // Helper function to check if a task is overdue
+  const isTaskOverdue = (task: any) => {
+    if (!task.dueDate) return false;
+    const isDueDate = new Date(task.dueDate) < new Date();
+    const status = task.status?.toLowerCase() || '';
+    const isNotCompleted = status !== 'completed' && 
+                          status !== 'complete' && 
+                          status !== 'completed_task';
+    return isDueDate && isNotCompleted;
+  };
+
+  // Helper function to map the current status display values
+  const getDisplayStatus = (status: string | undefined, dueDate: string | undefined) => {
+    // If status is undefined, return a default
+    if (!status) return 'In Progress';
+    
+    // Check if the task is overdue (past due date and not completed)
+    if (dueDate) {
+      const isDueDate = new Date(dueDate) < new Date();
+      const lowercaseStatus = status.toLowerCase();
+      const isNotCompleted = lowercaseStatus !== 'completed' && 
+                            lowercaseStatus !== 'complete' && 
+                            lowercaseStatus !== 'completed_task';
+      
+      if (isDueDate && isNotCompleted) {
+        return 'Overdue';
+      }
+    }
+    
+    // Format the status for display
+    return status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
   const applyFilters = () => {
     let filtered = [...tasks];
 
@@ -92,11 +124,19 @@ const TaskManagement = () => {
         task.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         task.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-    }
-
-    // Status filter
+    }    // Status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(task => task.status === statusFilter);
+      if (statusFilter === 'overdue') {
+        filtered = filtered.filter(task => isTaskOverdue(task));
+      } else if (statusFilter === 'in-progress') {
+        // Filter by in-progress status (both in-progress and in_progress) and not overdue
+        filtered = filtered.filter(task => 
+          (task.status === 'in-progress' || task.status === 'in_progress') && 
+          !isTaskOverdue(task)
+        );
+      } else {
+        filtered = filtered.filter(task => task.status === statusFilter);
+      }
     }
 
     // Priority filter
@@ -136,14 +176,13 @@ const TaskManagement = () => {
       await handleTaskUpdate(taskId, { status: newStatus });
     }
   };
-
   const getProjectStats = () => {
     const totalTasks = filteredTasks.length;
     const completedTasks = filteredTasks.filter(t => t.status === 'completed').length;
-    const inProgressTasks = filteredTasks.filter(t => t.status === 'in-progress').length;
-    const todoTasks = filteredTasks.filter(t => t.status === 'todo').length;
+    const inProgressTasks = filteredTasks.filter(t => t.status === 'in-progress' || t.status === 'in_progress').length;
+    const overdueTasks = filteredTasks.filter(t => isTaskOverdue(t)).length;
 
-    return { totalTasks, completedTasks, inProgressTasks, todoTasks };
+    return { totalTasks, completedTasks, inProgressTasks, overdueTasks };
   };
 
   const stats = getProjectStats();
@@ -205,12 +244,10 @@ const TaskManagement = () => {
                   <p className="text-xs text-secondary/70">In Progress</p>
                 </div>
               </CardContent>
-            </Card>
-            <Card className="border-accent/20">
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-yellow-600">{stats.todoTasks}</p>
-                  <p className="text-xs text-secondary/70">To Do</p>
+            </Card>            <Card className="border-accent/20">
+              <CardContent className="p-4">                <div className="text-center">
+                  <p className="text-2xl font-bold text-red-600">{stats.overdueTasks}</p>
+                  <p className="text-xs text-secondary/70">Overdue</p>
                 </div>
               </CardContent>
             </Card>
@@ -241,12 +278,9 @@ const TaskManagement = () => {
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-full md:w-40">
                     <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="todo">To Do</SelectItem>
+                  </SelectTrigger>                  <SelectContent>                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="overdue">Overdue</SelectItem>
                     <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="review">In Review</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>

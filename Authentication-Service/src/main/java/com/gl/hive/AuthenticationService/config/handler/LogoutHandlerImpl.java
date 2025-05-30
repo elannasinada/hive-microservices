@@ -49,7 +49,7 @@ public class LogoutHandlerImpl implements LogoutHandler {
                     .forEach(savedToken ->
                             jwtTokenRepository.deleteById(savedToken.getJwtTokenId())
                     );
-            log.warn("User {} has logged out ✅. Proceeding the delete his/her tokens ...", jwtToken.getUser().getUsername());
+            log.warn("User {} has logged out ✅. Proceeding the delete his/her tokens ...", jwtToken.getUser().getActualUsername());
         }
     }
 

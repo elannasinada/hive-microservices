@@ -24,7 +24,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
   const [taskData, setTaskData] = useState({
     title: task.title || '',
     description: task.description || '',
-    status: task.status || 'todo',
+    status: task.status || 'in_progress',
     priority: task.priority || 'medium',
     dueDate: task.dueDate || ''
   });
@@ -131,15 +131,16 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
-
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'in-progress': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'review': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'todo': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    const statusLower = status.toLowerCase();
+    if (statusLower === 'completed' || statusLower === 'complete') {
+      return 'bg-green-100 text-green-800 border-green-200';
+    } else if (statusLower === 'in-progress' || statusLower === 'in_progress' || statusLower === 'inprogress') {
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    } else if (statusLower === 'overdue') {
+      return 'bg-red-100 text-red-800 border-red-200';
     }
+    return 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
   return (
@@ -196,11 +197,8 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
                         <Select value={taskData.status} onValueChange={(value) => setTaskData({...taskData, status: value})}>
                           <SelectTrigger>
                             <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="todo">To Do</SelectItem>
-                            <SelectItem value="in-progress">In Progress</SelectItem>
-                            <SelectItem value="review">Review</SelectItem>
+                          </SelectTrigger>                          <SelectContent>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
                           </SelectContent>
                         </Select>
@@ -283,21 +281,12 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
                   <div className="pt-4 border-t border-accent/20">
                     <p className="text-sm font-medium mb-2">Quick Actions:</p>
                     <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
+                      <Button                        size="sm"
                         variant="outline"
                         onClick={() => handleStatusChange('in-progress')}
                         className="border-blue-200 text-blue-600 hover:bg-blue-50"
                       >
                         Start Work
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleStatusChange('review')}
-                        className="border-purple-200 text-purple-600 hover:bg-purple-50"
-                      >
-                        Ready for Review
                       </Button>
                       <Button
                         size="sm"

@@ -39,7 +39,7 @@ public class AdminUserController {
     public ResponseEntity<User> updateUser(@PathVariable Long userId, @RequestBody User updatedUser) {
         return userRepository.findById(userId)
                 .map(user -> {
-                    user.setUsername(updatedUser.getUsername());
+                    user.setUsername(updatedUser.getActualUsername());
                     user.setEmail(updatedUser.getEmail());
                     user.setDepartments(updatedUser.getDepartments());
                     userRepository.save(user);

@@ -111,8 +111,8 @@ public class TaskAssignmentServiceImpl implements TaskAssignmentService {
         AtomicReference<String> successMessage = new AtomicReference<>();
         members.forEach(memberDTO -> {
 
-            alreadyAssignedMessage.set("❌😖 Fail: Task is already assigned to user '" + memberDTO.getUsername() + "' 😖❌");
-            successMessage.set("✅ Success: Task assigned to user '" + memberDTO.getUsername() + "' ✅");
+            alreadyAssignedMessage.set("❌😖 Fail: Task is already assigned to user '" + memberDTO.getActualUsername() + "' 😖❌");
+            successMessage.set("✅ Success: Task assigned to user '" + memberDTO.getActualUsername() + "' ✅");
 
             // check if the task is already assigned to the user; skip ahead, and add a response to the map
             boolean isTaskAlreadyAssigned = taskUserRepository.existsByUserIdAndTask_TaskId(memberDTO.getUserId(), task.getTaskId());

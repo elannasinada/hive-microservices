@@ -61,6 +61,7 @@ public class UserInterCommunicationService {
     }
 
     public User getUserById(Long userId) {
+        log.info("Attempting to fetch user with ID: {}", userId);
         return userRepository.findById(userId)
                 .orElseThrow(() -> {
                     log.error("😖 huh... it seems we don't have user with {} in our db 😖", userId);
@@ -107,7 +108,7 @@ public class UserInterCommunicationService {
 
         return UserDTO.builder()
                 .userId(user.getUserId())
-                .username(user.getUsername())
+                .username(user.getActualUsername())
                 .email(user.getEmail())
                 .password(user.getPassword())
                 .roles(rolesDTO)

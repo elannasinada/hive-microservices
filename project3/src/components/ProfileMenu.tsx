@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription
 } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
@@ -127,16 +128,21 @@ const ProfileMenu = () => {
                   JPG, PNG or GIF (max 5MB)
                 </p>
               </div>
-            </div>
-
-            {/* User Information (Only Full Name and Roles) */}
+            </div>            {/* User Information (Email, Role, and Department) */}
             <div className="space-y-4">
               <div>
-                <Label className="text-sm font-medium">Full Name</Label>
-                <Input value={user.username} readOnly className="bg-muted" />
+                <Label className="text-sm font-medium">Email</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <span
+                  key={user.email}
+                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                  >
+                    {user.email}
+                  </span>
+                </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">Roles</Label>
+                <Label className="text-sm font-medium">Role</Label>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {user.roles.map((role) => (
                     <span
@@ -148,6 +154,18 @@ const ProfileMenu = () => {
                   ))}
                 </div>
               </div>
+              {user.department && (
+                <div>
+                  <Label className="text-sm font-medium">Department</Label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    <span
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                    >
+                      {user.department}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </DialogContent>

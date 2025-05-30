@@ -57,6 +57,6 @@ public interface AuthenticationService {
             throws AuthenticationFailedException;
 
     // Add this for profile picture update
-    String updateProfilePicture(MultipartFile file, String email);
+    String updateProfilePicture(Long userId, MultipartFile file);
 
 }

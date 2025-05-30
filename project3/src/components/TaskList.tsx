@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,24 +24,49 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
   // Only allow task management for ADMIN or PROJECT_LEADER
   const canManageTasks = user && (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'));
 
+  // Helper function to check if a task is overdue
+  const isTaskOverdue = (task: any) => {
+    if (!task.dueDate) return false;
+    const isDueDate = new Date(task.dueDate) < new Date();
+    const statusLower = task.status?.toLowerCase() || '';
+    const isNotCompleted = statusLower !== 'completed' && 
+                          statusLower !== 'complete' && 
+                          statusLower !== 'completed_task';
+    return isDueDate && isNotCompleted;
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
+      case 'HIGH': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'LOW': return 'bg-green-100 text-green-800 border-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
-
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'in-progress': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'review': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'todo': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    const statusLower = status?.toLowerCase() || '';
+    
+    // Check for overdue tasks
+    if (statusLower === 'overdue') {
+      return 'bg-red-100 text-red-800 border-red-200';
     }
+    
+    // Check for completed tasks
+    if (statusLower === 'completed' || 
+        statusLower === 'complete' || 
+        statusLower === 'completed_task') {
+      return 'bg-green-100 text-green-800 border-green-200';
+    }
+    
+    // Check for in-progress tasks
+    if (statusLower === 'in_progress' || 
+        statusLower === 'inprogress' || 
+        statusLower === 'in-progress') {
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+    
+    // Default
+    return 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
   const handleSearch = async () => {
@@ -220,9 +244,10 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
               <div className="flex space-x-2">
                 <Badge className={getPriorityColor(task.priority)}>
                   {task.priority}
-                </Badge>
-                <Badge className={getStatusColor(task.status)}>
-                  {task.status?.replace('-', ' ')}
+                </Badge>                <Badge className={isTaskOverdue(task) 
+                  ? 'bg-red-100 text-red-800 border-red-200' 
+                  : getStatusColor(task.status)}>
+                  {isTaskOverdue(task) ? 'Overdue' : task.status?.replace('-', ' ')}
                 </Badge>
               </div>
             </CardHeader>

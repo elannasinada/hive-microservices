@@ -72,8 +72,8 @@ public class ProjectUtilsImpl implements ProjectUtils {
      */
     @Override
     public List<UserMembersDto> getUserDtoList(Project project) {
-        // Get all project members associated with the given project
-        List<ProjectMembers> members = projectMembersRepository.findByProject(project);
+        // Get only active project members associated with the given project
+        List<ProjectMembers> members = projectMembersRepository.findByProjectAndActiveTrue(project);
 
         // Create a list of UserDto objects for the project members
         ArrayList<UserMembersDto> userDtos = new ArrayList<>();

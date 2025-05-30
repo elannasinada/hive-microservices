@@ -61,9 +61,38 @@ const Dashboard = () => {
           .then(tasks => {
             setMyTasks(tasks);
             const today = new Date().toISOString().slice(0, 10);
-            setDueToday(tasks.filter(t => t.dueDate && t.dueDate.slice(0, 10) === today && t.taskStatus !== 'completed'));
-            setUpcomingTasks(tasks.filter(t => t.dueDate && t.dueDate.slice(0, 10) > today && t.taskStatus !== 'completed'));
-            setCompletedTasks(tasks.filter(t => t.taskStatus === 'completed'));
+            
+            // Helper function to check if task is overdue
+            const isTaskOverdue = (task: any) => {
+              if (!task.dueDate) return false;
+              const isDueDate = new Date(task.dueDate) < new Date();
+              const status = task.taskStatus?.toLowerCase() || '';
+              const isNotCompleted = status !== 'completed' && 
+                                    status !== 'complete' && 
+                                    status !== 'completed_task';
+              return isDueDate && isNotCompleted;
+            };
+            
+            // Filter overdue tasks
+            setDueToday(tasks.filter(t => isTaskOverdue(t)));
+            
+            // Filter upcoming (in progress) tasks
+            setUpcomingTasks(tasks.filter(t => {
+              const status = t.taskStatus?.toLowerCase() || '';
+              return (status === 'in_progress' || 
+                     status === 'inprogress' || 
+                     status === 'in-progress' ||
+                     status === 'progress') &&
+                     !isTaskOverdue(t);
+            }));
+            
+            // Filter completed tasks
+            setCompletedTasks(tasks.filter(t => {
+              const status = t.taskStatus?.toLowerCase() || '';
+              return status === 'completed' || 
+                     status === 'complete' || 
+                     status === 'completed_task';
+            }));
           })
           .catch(err => {
             setMyTasks([]);

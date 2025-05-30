@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +14,17 @@ interface KanbanBoardProps {
   canEdit: boolean;
 }
 
+// Helper function to check if a task is overdue
+const isTaskOverdue = (task: any) => {
+  if (!task.dueDate) return false;
+  const isDueDate = new Date(task.dueDate) < new Date();
+  const isNotCompleted = !task.status || 
+                         (task.status.toLowerCase() !== 'completed' && 
+                          task.status.toLowerCase() !== 'complete' && 
+                          task.status.toLowerCase() !== 'completed_task');
+  return isDueDate && isNotCompleted;
+};
+
 const KanbanBoard: React.FC<KanbanBoardProps> = ({ 
   tasks, 
   onTaskUpdate, 
@@ -24,11 +34,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
 }) => {
   const [draggedTask, setDraggedTask] = useState<any>(null);
   const [viewingTask, setViewingTask] = useState<any>(null);
-
   const columns = [
-    { id: 'todo', title: 'To Do', count: tasks.filter(t => t.status === 'todo').length },
-    { id: 'in-progress', title: 'In Progress', count: tasks.filter(t => t.status === 'in-progress').length },
-    { id: 'review', title: 'In Review', count: tasks.filter(t => t.status === 'review').length },
+    { id: 'overdue', title: 'Overdue', count: tasks.filter(t => isTaskOverdue(t)).length },
+    { id: 'in-progress', title: 'In Progress', count: tasks.filter(t => (t.status === 'in-progress' || t.status === 'in_progress') && !isTaskOverdue(t)).length },
     { id: 'completed', title: 'Completed', count: tasks.filter(t => t.status === 'completed').length }
   ];
 
@@ -39,14 +47,11 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
       case 'low': return 'bg-green-100 text-green-800 border-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
-  };
-
-  const getStatusColor = (status: string) => {
+  };  const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-500';
       case 'in-progress': return 'bg-blue-500';
-      case 'review': return 'bg-purple-500';
-      case 'todo': return 'bg-gray-400';
+      case 'overdue': return 'bg-red-500';
       default: return 'bg-gray-400';
     }
   };
@@ -68,9 +73,17 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
     setDraggedTask(null);
   };
-
   const getTasksByStatus = (status: string) => {
-    return tasks.filter(task => task.status === status);
+    if (status === 'overdue') {
+      return tasks.filter(task => isTaskOverdue(task));
+    } else if (status === 'in-progress') {
+      return tasks.filter(task => 
+        (task.status === 'in-progress' || task.status === 'in_progress') && 
+        !isTaskOverdue(task)
+      );
+    } else {
+      return tasks.filter(task => task.status === status);
+    }
   };
 
   const isOverdue = (dueDate: string) => {

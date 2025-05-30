@@ -54,12 +54,6 @@ const Header = () => {
                                         Project Leader
                                     </Link>
                                 )}
-                                <Link
-                                    to="/team"
-                                    className="text-secondary hover:text-primary transition-colors font-medium"
-                                >
-                                    Team
-                                </Link>
                             </nav>
                         )}
                     </div>

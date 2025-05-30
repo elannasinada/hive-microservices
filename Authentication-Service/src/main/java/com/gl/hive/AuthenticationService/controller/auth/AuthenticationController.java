@@ -66,11 +66,4 @@ public class AuthenticationController {
         return ResponseEntity.ok(authenticationService.authenticate(authenticationRequest));
     }
 
-    @PostMapping("/profile-picture")
-    public ResponseEntity<String> uploadProfilePicture(@RequestParam("profilePicture") MultipartFile file, @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
-        // The service will handle storage and DB update, returns the URL/path
-        String url = authenticationService.updateProfilePicture(file, principal.getUsername());
-        return ResponseEntity.ok(url);
-    }
-
 }

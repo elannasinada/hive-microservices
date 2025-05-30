@@ -12,6 +12,7 @@ interface User {
   rolesDescription: string[];
   active: boolean;
   profilePicture?: string;
+  department?: string;
 }
 
 interface AuthContextType {
@@ -22,6 +23,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,6 +47,12 @@ const normalizeUserData = (userData: any): User => {
       ).filter(Boolean)
       : [];
 
+  // Extract department from departments array if it exists
+  let department = undefined;
+  if (Array.isArray(userData.departments) && userData.departments.length > 0) {
+    department = userData.departments[0].department;
+  }
+
   return {
     id: userData.user_id || userData.id || userData.userId || '',
     username: userData.username || '',
@@ -52,7 +60,8 @@ const normalizeUserData = (userData: any): User => {
     roles: normalizedRoles,
     rolesDescription: userData.rolesDescription || [],
     active: !!userData.active,
-    profilePicture: userData.profilePicture || undefined
+    profilePicture: userData.profilePicture || undefined,
+    department: department
   };
 };
 
@@ -62,6 +71,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const API_BASE = 'http://localhost:9999';
+
+  const refreshUser = async () => {
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      try {
+        const userInfoRes = await fetch(`${API_BASE}/api/v1/inter-communication/current-user-dto`, {
+          headers: {
+            'Authorization': `Bearer ${storedToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (userInfoRes.ok) {
+          const userData = await userInfoRes.json();
+          const normalizedUser = normalizeUserData(userData);
+          setUser(normalizedUser);
+        } else {
+          console.error('Failed to refresh user info');
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('token');
+        }
+      } catch (error) {
+        console.error('Error refreshing user:', error);
+        setUser(null);
+        setToken(null);
+      }
+    }
+  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -221,7 +259,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     register,
     logout,
     isAuthenticated: !!user && !!token,
-    loading
+    loading,
+    refreshUser,
   };
 
   return (

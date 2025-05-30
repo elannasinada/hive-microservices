@@ -23,4 +23,8 @@ public class UserDTO {
     private Set<DepartmentsDTO> departments = new HashSet<>();
     private Set<RolesDTO> roles = new HashSet<>();
 
+    public String getActualUsername() {
+        return this.username;
+    }
+
 }

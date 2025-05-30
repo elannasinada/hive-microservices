@@ -50,15 +50,26 @@ const TaskListView: React.FC<TaskListViewProps> = ({
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
-
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'in-progress': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'review': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'todo': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    const statusLower = status?.toLowerCase() || '';
+    
+    // Handle overdue tasks
+    if (statusLower === 'overdue') {
+      return 'bg-red-100 text-red-800 border-red-200';
     }
+    
+    // Handle completed tasks
+    if (statusLower === 'completed' || statusLower === 'complete' || statusLower === 'completed_task') {
+      return 'bg-green-100 text-green-800 border-green-200';
+    }
+    
+    // Handle in-progress tasks
+    if (statusLower === 'in-progress' || statusLower === 'in_progress' || statusLower === 'inprogress') {
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+    
+    // Default case
+    return 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
   const handleSort = (field: string) => {
@@ -163,10 +174,8 @@ const TaskListView: React.FC<TaskListViewProps> = ({
                         {task.priority || 'Medium'}
                       </Badge>
                     </TableCell>
-                    
-                    <TableCell>
-                      <Badge className={`${getStatusColor(task.status)} text-xs`}>
-                        {task.status?.replace('-', ' ') || 'To Do'}
+                      <TableCell>                      <Badge className={`${overdue ? 'bg-red-100 text-red-800 border-red-200' : getStatusColor(task.status)} text-xs`}>
+                        {overdue ? 'Overdue' : (task.status?.replace('-', ' ') || 'In Progress')}
                       </Badge>
                     </TableCell>
                     

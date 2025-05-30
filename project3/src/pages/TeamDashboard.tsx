@@ -10,36 +10,144 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, CheckSquare, Calendar, Search, Clock, Star, MessageSquare, Filter } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { projectAPI, taskAPI } from '@/utils/api';
+import { toast } from '@/hooks/use-toast';
 
 const TeamDashboard = () => {
-  const { user } = useAuth();
-  const [activeProject, setActiveProject] = useState<any>(null);
+  const { user } = useAuth();  const [activeProject, setActiveProject] = useState<any>(null);
   const [myTasks, setMyTasks] = useState<any[]>([]);
   const [dueToday, setDueToday] = useState<any[]>([]);
+  const [overdueTasks, setOverdueTasks] = useState<any[]>([]);
   const [upcomingTasks, setUpcomingTasks] = useState<any[]>([]);
   const [completedTasks, setCompletedTasks] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState('all');  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [loadingTeamMembers, setLoadingTeamMembers] = useState(false);
+  const [projectTasks, setProjectTasks] = useState<any[]>([]);
+  const [projectProgress, setProjectProgress] = useState(0);
+  
+  // Helper function to check if a task is overdue - moved to the top
+  const isTaskOverdue = (task: any) => {
+    if (!task.dueDate) return false;
+    const isDueDate = new Date(task.dueDate) < new Date();
+    const isNotCompleted = !task.taskStatus || 
+                          (task.taskStatus.toLowerCase() !== 'completed' && 
+                           task.taskStatus.toLowerCase() !== 'complete' && 
+                           task.taskStatus.toLowerCase() !== 'completed_task');
+    return isDueDate && isNotCompleted;
+  };
+  
+  // Helper function for task priority color
+  const getTaskPriorityColor = (priority: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'HIGH': return 'bg-red-100 text-red-800 border-red-200';
+      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'LOW': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+  
+  // Helper function for task status color
+  const getStatusColor = (status: string) => {
+    // Check if task is overdue first
+    if (status && status.toLowerCase() === 'overdue') {
+      return 'bg-red-100 text-red-800';
+    }
+    
+    const lowercaseStatus = status?.toLowerCase?.() || '';
+    
+    // Handle various forms of "completed" status
+    if (lowercaseStatus === 'completed' || 
+        lowercaseStatus === 'complete' || 
+        lowercaseStatus === 'completed_task') {
+      return 'bg-green-100 text-green-800';
+    }
+    
+    // Handle various forms of "in progress" status
+    if (lowercaseStatus === 'in_progress' || 
+        lowercaseStatus === 'inprogress' || 
+        lowercaseStatus === 'in-progress' || 
+        lowercaseStatus === 'progress') {
+      return 'bg-blue-100 text-blue-800';
+    }
+    
+    // Handle various forms of "overdue" status
+    if (lowercaseStatus === 'overdue' || 
+        lowercaseStatus === 'late' || 
+        lowercaseStatus === 'delayed') {
+      return 'bg-red-100 text-red-800';
+    }
+    
+    // Default case
+    return 'bg-gray-100 text-gray-800';
+  };
 
+  // Fetch active project
   useEffect(() => {
     if (user) {
       projectAPI.getActiveProjectForUser(user.id)
-          .then(setActiveProject)
-          .catch(err => {
+          .then(res => {
+            console.log('Active project:', res);
+            setActiveProject(res);
+          })        .catch(err => {
             setActiveProject(null);
             console.error('Active project fetch failed:', err);
           });
-
+          
       // Fetch tasks
       taskAPI.search({ assignedTo_UserId: user.id })
         .then(tasks => {
           setMyTasks(tasks);
-          const today = new Date().toISOString().slice(0, 10);
-          setDueToday(tasks.filter((t: any) => t.dueDate && t.dueDate.slice(0, 10) === today && t.taskStatus !== 'completed'));
-          setUpcomingTasks(tasks.filter((t: any) => t.dueDate && t.dueDate.slice(0, 10) > today && t.taskStatus !== 'completed'));
-          setCompletedTasks(tasks.filter((t: any) => t.taskStatus === 'completed'));
+          
+          const today = new Date();
+          const todayStr = today.toISOString().slice(0, 10);
+          
+          // Filter tasks due today (by deadline date)
+          setDueToday(tasks.filter((t: any) => {
+            return t.dueDate && t.dueDate.slice(0, 10) === todayStr;
+          }));
+          
+          // Filter overdue tasks (past due date and not completed)
+          setOverdueTasks(tasks.filter((t: any) => {
+            // Check if task is overdue (past due date and not completed)
+            if (!t.dueDate) return false;
+            const isDueDate = new Date(t.dueDate) < new Date();
+            const status = t.taskStatus?.toLowerCase?.() || '';
+            const isNotCompleted = status !== 'completed' && 
+                                   status !== 'complete' && 
+                                   status !== 'completed_task';
+            return isDueDate && isNotCompleted;
+          }));
+          
+          // Filter in-progress tasks
+          setUpcomingTasks(tasks.filter((t: any) => {
+            const status = t.taskStatus?.toLowerCase?.() || '';
+            // Match "in progress" status in various forms
+            return status === 'in_progress' || 
+                   status === 'inprogress' || 
+                   status === 'in-progress' ||
+                   status === 'progress';
+          }));
+          
+          // Filter completed tasks
+          setCompletedTasks(tasks.filter((t: any) => {
+            // Check task status - use case insensitive comparison
+            const status = t.taskStatus?.toLowerCase?.() || '';
+            // Match "completed" status in various forms
+            return status === 'completed' || 
+                   status === 'complete' || 
+                   status === 'completed_task' ||
+                   status === 'done';
+          }));          
+          // Log task categories for debugging
+          console.log('FINAL Due today tasks:', dueToday.length);
+          console.log('FINAL Overdue tasks:', overdueTasks.length);
+          console.log('FINAL In Progress tasks:', upcomingTasks.length);
+          console.log('FINAL Completed tasks:', completedTasks.length);
+          
+          // Log all unique task statuses to help debug
+          const uniqueStatuses = [...new Set(tasks.map((t: any) => t.taskStatus))];
+          console.log('All task statuses in data:', uniqueStatuses);
         });
 
       // Fetch project history
@@ -49,73 +157,272 @@ const TeamDashboard = () => {
           setHistory([]);
           console.error('Completed projects fetch failed:', err);
         });
+    }  }, [user]);
+    // Fetch team members when active project changes
+  useEffect(() => {
+    if (activeProject && activeProject.projectId) {
+      setLoadingTeamMembers(true);
+      console.log('Fetching team members for project:', activeProject.projectId);
+      projectAPI.listMembers(activeProject.projectId)
+        .then(response => {
+          // Extract projectMembers array from the response
+          const members = response.projectMembers || [];
+          console.log('Team members loaded:', members.length, members);
+          setTeamMembers(members);
+        })
+        .catch(err => console.error('Failed to fetch team members:', err))
+        .finally(() => setLoadingTeamMembers(false));
+    } else {
+      // Reset team members when no active project
+      setTeamMembers([]);
     }
-  }, [user]);
+  }, [activeProject]);
 
+  // Fetch project tasks and calculate progress when active project changes
+  useEffect(() => {
+    if (activeProject && activeProject.projectId) {
+      console.log('Fetching tasks for project:', activeProject.projectId);
+      taskAPI.search({ projectId: activeProject.projectId })
+        .then(tasks => {
+          console.log('Project tasks loaded:', tasks.length, tasks);
+          setProjectTasks(tasks);
+          
+          // Calculate project progress
+          if (tasks.length > 0) {
+            const completedTasks = tasks.filter((task: any) => {
+              const status = task.taskStatus?.toLowerCase?.() || '';
+              return status === 'completed' || 
+                     status === 'complete' || 
+                     status === 'completed_task';
+            });
+            const progressPercentage = Math.round((completedTasks.length / tasks.length) * 100);
+            setProjectProgress(progressPercentage);
+            console.log(`Project progress: ${completedTasks.length}/${tasks.length} = ${progressPercentage}%`);
+          } else {
+            setProjectProgress(0);
+          }
+        })
+        .catch(err => {
+          console.error('Failed to fetch project tasks:', err);
+          setProjectTasks([]);
+          setProjectProgress(0);
+        });
+    } else {
+      // Reset project tasks when no active project
+      setProjectTasks([]);
+      setProjectProgress(0);
+    }
+  }, [activeProject]);
+  
   const filteredTasks = myTasks.filter(task => {
     const matchesSearch = task.taskName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          task.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const taskStatus = task.taskStatus?.toLowerCase() || '';
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    const dueDate = task.dueDate ? task.dueDate.slice(0, 10) : null;
+    
+    // Check if task is overdue
+    const isOverdue = isTaskOverdue(task);
 
     if (selectedFilter === 'all') return matchesSearch;
-    if (selectedFilter === 'due-today') return dueToday.includes(task) && matchesSearch;
-    if (selectedFilter === 'upcoming') return upcomingTasks.includes(task) && matchesSearch;
-    if (selectedFilter === 'completed') return completedTasks.includes(task) && matchesSearch;
+    if (selectedFilter === 'due-today') return dueDate === todayStr && matchesSearch; // Filter by deadline date
+    if (selectedFilter === 'upcoming') {
+      // Filter by IN_PROGRESS status (case-insensitive and handling variations)
+      return (taskStatus === 'in_progress' || 
+              taskStatus === 'inprogress' || 
+              taskStatus === 'in-progress') && 
+              !isOverdue && // Not overdue
+              matchesSearch;
+    }
+    if (selectedFilter === 'completed') {
+      // Filter by COMPLETED status (case-insensitive and handling variations)
+      return (taskStatus === 'completed' || 
+              taskStatus === 'complete' || 
+              taskStatus === 'completed_task') && 
+              matchesSearch;
+    }
+    if (selectedFilter === 'overdue') {
+      // Filter by overdue (past due date and not completed)
+      return isOverdue && matchesSearch;
+    }
 
     return matchesSearch;
   });
-
-  const getTaskPriorityColor = (priority: string) => {
-    switch (priority?.toLowerCase()) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  
+  const updateTaskStatus = async (taskId: string, newStatus: string) => {
+    try {
+      // Find the current task
+      const task = myTasks.find(t => t.taskId === taskId);
+      
+      // Check if task is overdue (past due date and not completed)
+      if (task && task.dueDate) {
+        const isDueDate = new Date(task.dueDate) < new Date();
+        const isNotCompleted = !task.taskStatus || task.taskStatus.toLowerCase() !== 'completed';
+        
+        if (isDueDate && isNotCompleted) {
+          // Set status to OVERDUE instead
+          await taskAPI.update(taskId, { taskStatus: 'OVERDUE' });
+          
+          toast({
+            title: "Task Marked as Overdue",
+            description: "This task has passed its deadline and has been marked as overdue.",
+            variant: "destructive"
+          });
+          
+          // Update local task data
+          setMyTasks(prevTasks => {
+            return prevTasks.map(t => {
+              if (t.taskId === taskId) {
+                return { ...t, taskStatus: 'OVERDUE' };
+              }
+              return t;
+            });
+          });
+          
+          return;
+        }
+      }
+      
+      // Normal update flow
+      await taskAPI.update(taskId, { taskStatus: newStatus });
+      
+      // Update local task data
+      setMyTasks(prevTasks => {
+        return prevTasks.map(task => {
+          if (task.taskId === taskId) {
+            return { ...task, taskStatus: newStatus };
+          }
+          return task;
+        });
+      });
+      
+      // Refresh task categories
+      const updatedTasks = [...myTasks];
+      const updatedTask = updatedTasks.find(t => t.taskId === taskId);
+      if (updatedTask) {
+        updatedTask.taskStatus = newStatus;
+      }
+        // Update filtered lists
+      setDueToday(updatedTasks.filter(t => {
+        // Check if task is overdue (past due date and not completed)
+        if (!t.dueDate) return false;
+        const isDueDate = new Date(t.dueDate) < new Date();
+        const status = t.taskStatus?.toLowerCase?.() || '';
+        const isNotCompleted = status !== 'completed' && 
+                             status !== 'complete' && 
+                             status !== 'completed_task';
+        return isDueDate && isNotCompleted;
+      }));
+      
+      setUpcomingTasks(updatedTasks.filter(t => {
+        const status = t.taskStatus?.toLowerCase?.() || '';
+        return status === 'in_progress' || 
+               status === 'inprogress' || 
+               status === 'in-progress' ||
+               status === 'progress';
+      }));
+      
+      setCompletedTasks(updatedTasks.filter(t => {
+        const status = t.taskStatus?.toLowerCase?.() || '';
+        return status === 'completed' || 
+               status === 'complete' || 
+               status === 'completed_task' ||
+               status === 'done';
+      }));
+      
+      toast({
+        title: "Status Updated",
+        description: "Task status has been updated successfully.",
+      });
+    } catch (error) {
+      console.error("Failed to update task status:", error);
+      toast({
+        title: "Update Failed",
+        description: "Could not update task status. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'to_do': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const TaskCard = ({ task }: { task: any }) => {
+    const [showStatusOptions, setShowStatusOptions] = useState(false);
+    
+    return (
+      <Card className="border-accent/20 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <h3 className="font-semibold text-primary line-clamp-2">{task.taskName}</h3>
+            <Badge className={`text-xs ${getTaskPriorityColor(task.priority)} ml-2`}>
+              {task.priority || 'Medium'}
+            </Badge>
+          </div>
+
+          <p className="text-sm text-secondary/70 mb-3 line-clamp-2">{task.description}</p>
+
+          <div className="flex items-center justify-between mb-3">
+            <div className="relative">              <Badge 
+                className={`${getStatusColor(task.taskStatus)} cursor-pointer`}
+                onClick={() => {
+                  // Check if task is overdue before allowing status change
+                  const isOverdue = isTaskOverdue(task);
+                  
+                  if (isOverdue) {
+                    toast({
+                      title: "Cannot Change Status",
+                      description: "This task is overdue and its status cannot be changed unless the deadline is extended.",
+                      variant: "destructive"
+                    });
+                  } else {
+                    setShowStatusOptions(!showStatusOptions);
+                  }
+                }}
+              >
+                {isTaskOverdue(task) ? 'Overdue' : (task.taskStatus?.replace('_', ' ') || 'In Progress')} ▾
+              </Badge>
+              
+              {showStatusOptions && (
+                <div className="absolute top-full left-0 mt-1 bg-white shadow-lg rounded-md p-1 z-10 border border-accent/20">
+                  <div 
+                    className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
+                    onClick={() => {
+                      updateTaskStatus(task.taskId, 'IN_PROGRESS');
+                      setShowStatusOptions(false);
+                    }}
+                  >
+                    In Progress
+                  </div>
+                  <div 
+                    className="px-3 py-1 hover:bg-accent/10 rounded cursor-pointer text-sm"
+                    onClick={() => {
+                      updateTaskStatus(task.taskId, 'COMPLETED');
+                      setShowStatusOptions(false);
+                    }}
+                  >
+                    Completed
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center text-xs text-secondary/60">
+              <Calendar className="w-3 h-3 mr-1" />
+              {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <MessageSquare className="w-4 h-4 text-secondary/60" />
+              <span className="text-xs text-secondary/60">3 comments</span>
+            </div>
+            {task.dueDate && new Date(task.dueDate).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10) && (
+              <Badge className="bg-red-100 text-red-700 text-xs">Due Today</Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
-
-  const TaskCard = ({ task }: { task: any }) => (
-    <Card className="border-accent/20 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-3">
-          <h3 className="font-semibold text-primary line-clamp-2">{task.taskName}</h3>
-          <Badge className={`text-xs ${getTaskPriorityColor(task.priority)} ml-2`}>
-            {task.priority || 'Medium'}
-          </Badge>
-        </div>
-
-        <p className="text-sm text-secondary/70 mb-3 line-clamp-2">{task.description}</p>
-
-        <div className="flex items-center justify-between mb-3">
-          <Badge className={getStatusColor(task.taskStatus)}>
-            {task.taskStatus?.replace('_', ' ') || 'To Do'}
-          </Badge>
-          <div className="flex items-center text-xs text-secondary/60">
-            <Calendar className="w-3 h-3 mr-1" />
-            {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <MessageSquare className="w-4 h-4 text-secondary/60" />
-            <span className="text-xs text-secondary/60">3 comments</span>
-          </div>
-          <Button variant="outline" size="sm" className="text-xs">
-            View Details
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
 
   const TeamMemberCard = ({ member }: { member: any }) => (
     <Card className="border-accent/20 hover:shadow-md transition-all duration-300">
@@ -164,36 +471,37 @@ const TeamDashboard = () => {
                   className="pl-10 w-full sm:w-80"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-
-              <select
-                className="px-3 py-2 border border-accent/20 rounded-md text-sm bg-background"
-                value={selectedFilter}
-                onChange={(e) => setSelectedFilter(e.target.value)}
-                title="Select task filter"
-              >
-                <option value="all">All Tasks</option>
-                <option value="due-today">Due Today</option>
-                <option value="upcoming">Upcoming</option>
+                />              </div>
+              
+              <div>
+                <select
+                  className="px-3 py-2 border border-accent/20 rounded-md text-sm bg-background"
+                  value={selectedFilter}
+                  onChange={(e) => setSelectedFilter(e.target.value)}
+                  title="Select task filter"
+                ><option value="all">All Tasks</option>
+                <option value="due-today">Due Today (Deadline)</option>
+                <option value="upcoming">In Progress</option>
                 <option value="completed">Completed</option>
-              </select>
+                <option value="overdue">Overdue</option>                </select>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Analytics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-primary/5 to-primary/10">
+
+          <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-red-50 to-red-100">
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <CheckSquare className="w-6 h-6 text-primary" />
+                <div className="p-3 bg-red-100 rounded-lg">
+                  <Calendar className="w-6 h-6 text-red-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-secondary/70">Today's Tasks</p>
+                  <p className="text-sm font-medium text-secondary/70">Due Today</p>
                   <p className="text-2xl font-bold text-primary">{dueToday.length}</p>
-                  <p className="text-xs text-secondary/60">of {myTasks.length} total</p>
+                  <p className="text-xs text-secondary/60">by deadline</p>
                 </div>
               </div>
             </CardContent>
@@ -202,28 +510,24 @@ const TeamDashboard = () => {
           <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-accent/20 to-accent/30">
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="p-3 bg-accent/30 rounded-lg">
-                  <Calendar className="w-6 h-6 text-secondary" />
+                <div className="p-3 bg-accent/30 rounded-lg">                  <Calendar className="w-6 h-6 text-secondary" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-secondary/70">Upcoming</p>
+                  <p className="text-sm font-medium text-secondary/70">In Progress</p>
                   <p className="text-2xl font-bold text-primary">{upcomingTasks.length}</p>
-                  <p className="text-xs text-secondary/60">next 7 days</p>
+                  <p className="text-xs text-secondary/60">active tasks</p>
                 </div>
               </div>
             </CardContent>
-          </Card>
-
-          <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-green-50 to-green-100">
+          </Card>          <Card className="border-accent/20 hover:shadow-md transition-shadow bg-gradient-to-br from-green-50 to-green-100">
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="p-3 bg-green-100 rounded-lg">
                   <Star className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="ml-4">
+                </div>                <div className="ml-4">
                   <p className="text-sm font-medium text-secondary/70">Completed</p>
                   <p className="text-2xl font-bold text-primary">{completedTasks.length}</p>
-                  <p className="text-xs text-secondary/60">this month</p>
+                  <p className="text-xs text-secondary/60">completed tasks</p>
                 </div>
               </div>
             </CardContent>
@@ -276,14 +580,12 @@ const TeamDashboard = () => {
                         </div>
                       </div>
                       <Badge className="bg-green-100 text-green-800">Active</Badge>
-                    </div>
-
-                    <div className="mb-4">
+                    </div>                    <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-secondary/70">Project Progress</span>
-                        <span className="text-sm text-primary font-semibold">65%</span>
+                        <span className="text-sm text-primary font-semibold">{projectProgress}%</span>
                       </div>
-                      <Progress value={65} className="h-2" />
+                      <Progress value={projectProgress} className="h-2" />
                     </div>
 
                     {teamMembers.length > 0 && (
@@ -313,11 +615,9 @@ const TeamDashboard = () => {
                   </div>
                 )}
               </CardContent>
-            </Card>
-
-            {/* Quick Task Overview */}
+            </Card>            {/* Quick Task Overview */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="border-accent/20">
+              <Card className="border-accent/20 bg-gradient-to-br from-red-50 to-red-100">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-primary text-lg flex items-center">
                     <Calendar className="w-5 h-5 mr-2 text-red-500" />
@@ -327,10 +627,11 @@ const TeamDashboard = () => {
                 <CardContent>
                   {dueToday.length > 0 ? (
                     <div className="space-y-3">
+                      
                       {dueToday.slice(0, 3).map((task: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
+                        <div key={index} className="flex items-center justify-between p-2 bg-red-100/80 rounded-lg border border-red-200">
                           <span className="text-sm font-medium truncate">{task.taskName}</span>
-                          <Badge className="bg-red-100 text-red-800 text-xs">Urgent</Badge>
+                          <Badge className="bg-red-200 text-red-800 text-xs">Due Today</Badge>
                         </div>
                       ))}
                       {dueToday.length > 3 && (
@@ -339,16 +640,15 @@ const TeamDashboard = () => {
                     </div>
                   ) : (
                     <div className="text-center py-4">
-                      <span className="text-2xl">🎉</span>
-                      <p className="text-sm text-secondary/60 mt-1">All caught up!</p>
+                      <span className="text-2xl">📅</span>
+                      <p className="text-sm text-secondary/60 mt-1">No tasks due today!</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
 
               <Card className="border-accent/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-primary text-lg flex items-center">
+                <CardHeader className="pb-3">                  <CardTitle className="text-primary text-lg flex items-center">
                     <Clock className="w-5 h-5 mr-2 text-blue-500" />
                     In Progress
                   </CardTitle>
@@ -412,12 +712,38 @@ const TeamDashboard = () => {
                 <CardTitle className="text-primary">My Tasks</CardTitle>
                 <p className="text-secondary/70">Manage and track your assigned tasks</p>
               </CardHeader>
-              <CardContent>
-                {filteredTasks.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredTasks.map((task: any, index: number) => (
-                      <TaskCard key={index} task={task} />
-                    ))}
+              <CardContent>                {filteredTasks.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">                    {filteredTasks
+                      .sort((a, b) => {
+                        // Priority mapping: HIGH = 3, MEDIUM = 2, LOW = 1, undefined = 0
+                        const priorityMap: {[key: string]: number} = {
+                          'HIGH': 3,
+                          'MEDIUM': 2,
+                          'LOW': 1
+                        };
+                        const aPriority = a.priority ? priorityMap[a.priority.toUpperCase()] || 0 : 0;
+                        const bPriority = b.priority ? priorityMap[b.priority.toUpperCase()] || 0 : 0;
+                        
+                        // First sort by priority (highest to lowest)
+                        if (bPriority !== aPriority) {
+                          return bPriority - aPriority;
+                        }
+                        
+                        // If priorities are equal, sort by due date (closest first)
+                        if (a.dueDate && b.dueDate) {
+                          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                        }
+                        
+                        // If one has due date and other doesn't, prioritize the one with due date
+                        if (a.dueDate && !b.dueDate) return -1;
+                        if (!a.dueDate && b.dueDate) return 1;
+                        
+                        return 0;
+                      })
+                      .map((task: any, index: number) => (
+                        <TaskCard key={index} task={task} />
+                      ))
+                    }
                   </div>
                 ) : (
                   <div className="text-center py-12">

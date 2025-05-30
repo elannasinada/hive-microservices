@@ -44,9 +44,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.UUID;
 
 import static com.gl.hive.shared.lib.model.enums.Role.TEAM_MEMBER;
 import static org.springframework.http.HttpStatus.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * Authentication implementation: Registration & Login.
@@ -60,6 +64,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Value("${account.verification.auth.url}")
     private String ACCOUNT_VERIFICATION_AUTH_URL;
+
+    @Value("${file.upload.profiles.directory}")
+    private String profilePicturesStorageDir;
 
     private final UserRepository userRepository;
     private final RolesRepository rolesRepository;
@@ -253,21 +260,49 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 ).getUserId();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public String updateProfilePicture(MultipartFile file, String email) {
-        Optional<User> userOptional = userRepository.findByEmail(email);
+    @PreAuthorize("authentication.principal.userId == #userId or hasRole('ADMIN')")
+    public String updateProfilePicture(Long userId, MultipartFile file) {
+        Optional<User> userOptional = userRepository.findById(userId);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             try {
-                user.setProfilePicture(file.getBytes());
-                userRepository.save(user);
+                // Define the directory to save the profile pictures
+                Path uploadPath = Paths.get(profilePicturesStorageDir);
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+
+                // Generate a unique filename
+                String originalFilename = file.getOriginalFilename();
+                String fileExtension = originalFilename != null && originalFilename.contains(".") ?
+                        originalFilename.substring(originalFilename.lastIndexOf(".")) : "";
+                String filename = user.getUserId() + "_profile_picture" + fileExtension;
+                Path filePath = uploadPath.resolve(filename);
+
+                // Save the file to the file system
+                Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+                // Set the profile picture path in the user entity and save to the database
+                user.setProfilePicturePath(filePath.toString());
+                // Remove the old byte array data if it exists
+                user.setProfilePicture(null);
+
+                User updatedUser = userRepository.save(user);
+                log.info("Profile picture saved successfully to {} for user with ID: {}", filePath.toString(), userId);
                 return "Profile picture updated successfully";
             } catch (IOException e) {
-                log.error("Error processing profile picture upload for user {}: {}", email, e.getMessage());
+                log.error("Error processing profile picture upload for user with ID {}: {}", userId, e.getMessage());
                 throw new HiveException("Failed to process profile picture upload", INTERNAL_SERVER_ERROR, INTERNAL_SERVER_ERROR.value());
+            } catch (Exception e) {
+                log.error("Error saving profile picture for user with ID {}: {}", userId, e.getMessage());
+                throw new HiveException("Failed to save profile picture", INTERNAL_SERVER_ERROR, INTERNAL_SERVER_ERROR.value());
             }
         } else {
-            throw new ResourceNotFoundException("User not found", NOT_FOUND, NOT_FOUND.value());
+            throw new ResourceNotFoundException("User not found with ID: " + userId, NOT_FOUND, NOT_FOUND.value());
         }
     }
 

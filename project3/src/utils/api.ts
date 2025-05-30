@@ -64,6 +64,18 @@ export const authAPI = {
   authenticate: () => apiRequest('/api/v1/auth/authenticate', { method: 'POST' }),
   getAccountVerification: (token: string) => apiRequest(`/api/v1/auth/accountVerification/${token}`),
   postAccountVerification: (token: string) => apiRequest(`/api/v1/auth/accountVerification/${token}`, { method: 'POST' }),
+  updateProfilePicture: (userId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest(`/api/v1/auth/update-profile-picture/${userId}`, {
+      method: 'PUT',
+      body: formData,
+      // Do NOT set Content-Type header for FormData
+      headers: {
+        // Existing headers from apiRequest will be applied, including Authorization
+      },
+    });
+  },
 };
 
 // Demo/Testing API

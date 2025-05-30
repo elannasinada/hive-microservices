@@ -31,6 +31,8 @@ public class User implements UserDetails {
     @Column(name = "profile_picture", columnDefinition = "LONGBLOB")
     private byte[] profilePicture;
 
+    private String profilePicturePath;
+
     /* relationships */
     /* users_roles */
     @ManyToMany(fetch = FetchType.EAGER)
@@ -96,6 +98,10 @@ public class User implements UserDetails {
     //  any access to any resources accept the login and search groups
     public boolean isEnabled() {
         return this.isActive();
+    }
+
+    public String getActualUsername() {
+        return this.username;
     }
 
 }

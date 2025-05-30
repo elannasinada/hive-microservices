@@ -27,4 +27,6 @@ public interface ProjectMembersRepository extends JpaRepository<ProjectMembers, 
     List<ProjectMembers> findByUserIdAndActiveTrue(Long userId);
     List<ProjectMembers> findByUserIdAndActiveFalse(Long userId);
     List<ProjectMembers> findByUserId(Long userId);
+
+    List<ProjectMembers> findByProjectAndActiveTrue(Project project);
 }

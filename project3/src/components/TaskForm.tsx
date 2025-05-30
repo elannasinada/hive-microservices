@@ -25,7 +25,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
     description: taskToEdit?.description || '',
     projectId: taskToEdit?.projectId || '',
     priority: taskToEdit?.priority || 'medium',
-    status: taskToEdit?.status || 'todo',
+    status: taskToEdit?.status || 'in_progress',
     dueDate: taskToEdit?.dueDate || ''
   });
   const [loading, setLoading] = useState(false);
@@ -192,11 +192,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
               <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
                 <SelectTrigger className="border-accent/30 focus:border-primary">
                   <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
+                </SelectTrigger>                <SelectContent>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
               </Select>

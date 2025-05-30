@@ -24,6 +24,11 @@ account:
   verification:
     auth:
       url: "http://localhost:8085" # Frontend base URL for verification link
+
+file:
+  upload:
+    profiles:
+      directory: "./uploads/profile_pictures" 
 ---
 
 #mysql-db configuration
