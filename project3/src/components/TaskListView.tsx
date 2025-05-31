@@ -198,12 +198,12 @@ const TaskListView: React.FC<TaskListViewProps> = ({
                         }`}>
                           <Calendar className="w-3 h-3 mr-1" />
                           {new Date(task.dueDate).toLocaleDateString()}
-                          {isActuallyOverdue && (
-                            <Badge className="ml-2 bg-red-100 text-red-800 text-xs">
-                              <Clock className="w-3 h-3 mr-1" />
-                              Overdue
-                            </Badge>
-                          )}
+                          {/*{isActuallyOverdue && (*/}
+                          {/*  <Badge className="ml-2 bg-red-100 text-red-800 text-xs">*/}
+                          {/*    /!*<Clock className="w-3 h-3 mr-1" />*!/*/}
+                          {/*    /!*Overdue*!/*/}
+                          {/*  </Badge>*/}
+                          {/*)}*/}
                         </div>
                       ) : (
                         <span className="text-xs text-secondary/60">No due date</span>
@@ -219,7 +219,7 @@ const TaskListView: React.FC<TaskListViewProps> = ({
                             </AvatarFallback>
                           </Avatar>
                         )) || (
-                          <span className="text-xs text-secondary/60">Unassigned</span>
+                          <span className="text-xs text-secondary/60">Mohammed Qasim</span>
                         )}
                         {task.assignees?.length > 3 && (
                           <div className="w-6 h-6 bg-accent/30 rounded-full flex items-center justify-center text-xs">
