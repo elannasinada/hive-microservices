@@ -55,7 +55,7 @@ spring:
         - id: authentication-service
           uri: lb://4-AUTHENTICATION-SERVICE
           predicates:
-            - Path=/api/v1/auth/**, /authenticated/**
+            - Path=/api/v1/auth/**, /authenticated/**, /api/v1/admin/**
           filters:
             - AuthenticationFilter
         - id: project-service

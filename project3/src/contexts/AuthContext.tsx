@@ -72,6 +72,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const API_BASE = 'http://localhost:9999';
 
+  // Helper function to get the correct authentication endpoint based on user roles
+  const getAuthEndpointForUser = (userData: any): string => {
+    const normalizedRoles = Array.isArray(userData.roles)
+        ? userData.roles.map((r: any) =>
+            typeof r === 'string'
+                ? r.replace(/^ROLE_/, '').toUpperCase()
+                : (r.role ? r.role.replace(/^ROLE_/, '').toUpperCase() : '')
+        ).filter(Boolean)
+        : [];
+
+    // Check roles in priority order: ADMIN > PROJECT_LEADER > TEAM_MEMBER
+    if (normalizedRoles.includes('ADMIN')) {
+      return '/authenticated/pa';
+    } else if (normalizedRoles.includes('PROJECT_LEADER')) {
+      return '/authenticated/pl';
+    } else if (normalizedRoles.includes('TEAM_MEMBER')) {
+      return '/authenticated/tm';
+    } else {
+      // Default to team member if no specific role found
+      return '/authenticated/tm';
+    }
+  };
+
   const refreshUser = async () => {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
@@ -106,33 +129,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
         try {
-          const response = await fetch(`${API_BASE}/authenticated/tm`, {
+          // First, get user info to determine correct authentication endpoint
+          const userInfoRes = await fetch(`${API_BASE}/api/v1/inter-communication/current-user-dto`, {
             headers: {
               'Authorization': `Bearer ${storedToken}`,
               'Content-Type': 'application/json'
             }
           });
 
-          if (response.ok) {
-            setToken(storedToken);
-            // Fetch user info and set user state
-            const userInfoRes = await fetch(`${API_BASE}/api/v1/inter-communication/current-user-dto`, {
+          if (userInfoRes.ok) {
+            const userData = await userInfoRes.json();
+            const authEndpoint = getAuthEndpointForUser(userData);
+            
+            console.log('Checking authentication with endpoint:', authEndpoint);
+            
+            // Now check authentication using the role-specific endpoint
+            const response = await fetch(`${API_BASE}${authEndpoint}`, {
               headers: {
                 'Authorization': `Bearer ${storedToken}`,
                 'Content-Type': 'application/json'
               }
             });
 
-            if (userInfoRes.ok) {
-              const userData = await userInfoRes.json();
+            if (response.ok) {
+              setToken(storedToken);
               const normalizedUser = normalizeUserData(userData);
               setUser(normalizedUser);
+              console.log('Authentication successful for user:', normalizedUser);
             } else {
-              setUser(null);
-              setToken(null);
+              console.log('Authentication failed, clearing token');
               localStorage.removeItem('token');
+              setToken(null);
+              setUser(null);
             }
           } else {
+            console.log('Failed to get user info, clearing token');
             localStorage.removeItem('token');
             setToken(null);
             setUser(null);

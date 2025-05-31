@@ -76,6 +76,25 @@ export const authAPI = {
       },
     });
   },
+  getAllUsers: () => apiRequest('/api/v1/auth/users'),
+  getCurrentUser: () => apiRequest('/api/v1/inter-communication/current-user-dto'),
+};
+
+// Admin API
+export const adminAPI = {
+  getAllUsers: () => apiRequest('/api/v1/admin/users'),
+  getUsersByDepartment: (department: string) => apiRequest(`/api/v1/admin/users/by-department?department=${encodeURIComponent(department)}`),
+  getUserById: (userId: string) => apiRequest(`/api/v1/admin/users/${userId}`),
+  updateUser: (userId: string, userData: any) => apiRequest(`/api/v1/admin/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(userData)
+  }),
+  toggleUserActivation: (userId: string, active: boolean) => apiRequest(`/api/v1/admin/users/${userId}/activate?active=${active}`, {
+    method: 'PUT'
+  }),
+  changeUserRole: (userId: string, role: string) => apiRequest(`/api/v1/admin/users/${userId}/role?role=${role}`, {
+    method: 'PUT'
+  }),
 };
 
 // Demo/Testing API
@@ -140,6 +159,7 @@ export const taskAPI = {
     method: 'POST',
     body: JSON.stringify(progressData)
   }),
+  fetchTasks: () => apiRequest('/api/v1/task/management/searchTasks'),
 };
 
 // Comment API

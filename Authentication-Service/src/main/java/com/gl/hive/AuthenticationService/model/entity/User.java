@@ -1,6 +1,9 @@
 package com.gl.hive.AuthenticationService.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.gl.hive.AuthenticationService.model.entity.jwt.JwtToken;
+import com.gl.hive.shared.lib.model.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -42,6 +45,7 @@ public class User implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     @Builder.Default
+    @JsonManagedReference("user-roles")
     private Set<Roles> roles = new HashSet<>();
 
     /* users_departments */
@@ -52,9 +56,11 @@ public class User implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "department_id")
     )
     @Builder.Default
+    @JsonManagedReference("user-departments")
     private Set<Departments> departments = new HashSet<>();
 
     @OneToMany(mappedBy = "user")
+    @JsonIgnore
     private List<JwtToken> jwtTokens;
     /* end of relationships */
 

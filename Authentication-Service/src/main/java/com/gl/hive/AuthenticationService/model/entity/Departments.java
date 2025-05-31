@@ -1,5 +1,6 @@
 package com.gl.hive.AuthenticationService.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.gl.hive.shared.lib.model.enums.Department;
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,11 +21,10 @@ public class Departments {
     private Long departmentId;
 
     @Enumerated(EnumType.STRING)
-    private Department department;
-
-    /* relationships */
+    private Department department;    /* relationships */
     @ManyToMany(mappedBy = "departments", fetch = FetchType.EAGER)
     @Builder.Default
+    @JsonBackReference("user-departments")
     private Set<User> users = new HashSet<>();
     /* end of relationships */
 

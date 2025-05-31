@@ -152,7 +152,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.gl.hive.AuthenticationService</mainClass>
+                    <mainClass>com.gl.hive.AuthenticationService.AuthenticationServiceApplication</mainClass>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

@@ -22,6 +22,11 @@ public class GatewayConfig {
                         .path("/api/v1/auth/**")
                         .uri("lb://4-AUTHENTICATION-SERVICE")
                 )
+                .route("admin-users-route", predicateSpec -> predicateSpec
+                        .path("/api/v1/admin/**")
+                        .filters(gatewayFilterSpec -> gatewayFilterSpec.filter(filterWithAuthentication()))
+                        .uri("lb://4-AUTHENTICATION-SERVICE")
+                )
                 .route("demo-route", predicateSpec -> predicateSpec
                         .path("/authenticated/**")
                         .uri("lb://4-AUTHENTICATION-SERVICE")
