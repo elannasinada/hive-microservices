@@ -5,10 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredRole?: string;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -20,9 +21,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       </div>
     );
   }
-
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Check role requirement if specified
+  if (requiredRole && user && !user.roles.includes(requiredRole)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

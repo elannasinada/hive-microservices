@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Calendar, Users, Plus, Search } from 'lucide-react';
+import { Calendar, Users, Plus, Search, Target, ClipboardList } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { projectAPI } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
+import TaskForm from './TaskForm';
 
 interface ProjectListProps {
   projects: any[];
@@ -20,6 +21,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [projectTasks, setProjectTasks] = useState<{ [projectId: string]: any[] }>({});
+  
+  // Member management state
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [members, setMembers] = useState<any[]>([]);
@@ -27,6 +30,13 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
   const [memberLoading, setMemberLoading] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Task management state
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [selectedProjectForTask, setSelectedProjectForTask] = useState<any>(null);
+
+  // Check if user can manage tasks
+  const canManageTasks = user && (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'));
 
   const handleSearch = async () => {
     setSearchLoading(true);
@@ -119,7 +129,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
       setActionLoading(false);
     }
   };
-
   const handleRemoveMember = async (userId: string) => {
     setActionLoading(true);
     try {
@@ -131,6 +140,25 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
       toast({ title: 'Error', description: 'Failed to remove member', variant: 'destructive' });
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleAddTask = (project: any) => {
+    setSelectedProjectForTask(project);
+    setShowTaskForm(true);
+  };
+
+  const handleTaskCreated = () => {
+    setShowTaskForm(false);
+    setSelectedProjectForTask(null);
+    onUpdate();
+    // Refresh project tasks
+    if (selectedProjectForTask) {
+      const projectId = selectedProjectForTask.id || selectedProjectForTask.projectId;
+      setTimeout(() => {
+        // Refresh tasks for this project
+        window.location.reload(); // Simple refresh - could be optimized
+      }, 500);
     }
   };
 
@@ -206,28 +234,69 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                     <Calendar className="inline w-4 h-4 mr-1" />
                     {endDate ? new Date(endDate).toLocaleDateString() : 'No deadline'}
                   </span>
+                </div>                {/* Project Statistics */}
+                <div className="grid grid-cols-3 gap-3 mb-4 p-3 bg-gray-50/50 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-blue-600">
+                      {tasks.filter((t: any) => t.status === 'to_do').length}
+                    </div>
+                    <div className="text-xs text-secondary/60">To Do</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-orange-600">
+                      {tasks.filter((t: any) => t.status === 'in_progress').length}
+                    </div>
+                    <div className="text-xs text-secondary/60">In Progress</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-green-600">
+                      {completedTasks}
+                    </div>
+                    <div className="text-xs text-secondary/60">Completed</div>
+                  </div>
                 </div>
+                
                 <div className="mb-2">
                   <div className="flex justify-between text-xs mb-1">
-                    <span>Progress</span>
+                    <span>Overall Progress</span>
                     <span>{progress}%</span>
                   </div>
                   <Progress value={progress} indicatorClassName={progressColor} />
                 </div>
-                <div className="flex items-center text-secondary/60 text-sm mb-2">
+                
+                <div className="flex items-center text-secondary/60 text-sm mb-3">
                   <Users className="w-4 h-4 mr-2" />
                   {project.memberCount || 0} members
+                  <span className="mx-2">•</span>
+                  <ClipboardList className="w-4 h-4 mr-1" />
+                  {totalTasks} task{totalTasks !== 1 ? 's' : ''} total
                 </div>
-                {canManageMembers && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-primary text-primary hover:bg-primary hover:text-white mt-2"
-                    onClick={() => { setSelectedProject(project); setShowMemberModal(true); }}
-                  >
-                    Manage Members
-                  </Button>
-                )}
+                
+                <div className="space-y-2">
+                  {canManageMembers && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-primary text-primary hover:bg-primary hover:text-white"
+                      onClick={() => { setSelectedProject(project); setShowMemberModal(true); }}
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      Manage Members
+                    </Button>
+                  )}
+                  
+                  {canManageTasks && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-accent text-accent hover:bg-accent hover:text-white"
+                      onClick={() => handleAddTask(project)}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Task
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );
@@ -287,10 +356,18 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                   </ul>
                 </div>
               </>
-            )}
-            <Button className="mt-4" onClick={() => setShowMemberModal(false)}>Close</Button>
+            )}            <Button className="mt-4" onClick={() => setShowMemberModal(false)}>Close</Button>
           </div>
         </div>
+      )}
+
+      {/* Task Form Modal */}
+      {showTaskForm && selectedProjectForTask && (
+        <TaskForm
+          onClose={() => setShowTaskForm(false)}
+          onSuccess={handleTaskCreated}
+          projects={[selectedProjectForTask]}
+        />
       )}
     </div>
   );

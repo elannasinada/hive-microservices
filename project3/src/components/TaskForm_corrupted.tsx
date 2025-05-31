@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { taskAPI, adminAPI, projectAPI, projectLeaderAPI, apiRequest } from '@/utils/api';
+import { taskAPI, adminAPI, apiRequest } from '@/utils/api';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -42,27 +43,31 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
     try {
       let filteredUsers = [];
       
-      if (user?.roles.includes('ADMIN') || user?.roles.includes('PROJECT_LEADER')) {
-        // Both admins and project leaders can see all users
-        try {
-          console.log('Fetching all users using admin endpoint...');
-          const users = await adminAPI.getAllUsers();
-          filteredUsers = users || [];
-          console.log('Successfully fetched users:', filteredUsers.length);
-        } catch (adminError) {
-          console.warn('Admin API failed, falling back to auth API:', adminError);
-          try {
-            const users = await authAPI.getAllUsers();
-            filteredUsers = users || [];
-            console.log('Successfully fetched users using auth API:', filteredUsers.length);
-          } catch (authError) {
-            console.error('Both admin and auth APIs failed:', authError);
+      if (user?.roles.includes('ADMIN')) {
+        // Admins can assign to all users
+        const users = await adminAPI.getAllUsers();
+        filteredUsers = users || [];
+      } else if (user?.roles.includes('PROJECT_LEADER')) {
+        // Project leaders can assign to:
+        // 1. Project members if project is selected
+        // 2. Users in their department if no specific project
+        if (formData.projectId) {
+          const members = await apiRequest(`/api/v1/project/list-members/${formData.projectId}`);
+          filteredUsers = members || [];
+        } else {
+          // For PROJECT_LEADERs without a specific project, get users from their department
+          if (user.department) {
+            const deptUsers = await adminAPI.getUsersByDepartment(user.department);
+            filteredUsers = (deptUsers || []).filter((u: any) => 
+              u.userId !== user.id
+            );
+          } else {
+            console.warn('PROJECT_LEADER user has no department assigned');
             filteredUsers = [];
           }
         }
       }
-      
-      setAvailableUsers(filteredUsers);
+        setAvailableUsers(filteredUsers);
     } catch (error) {
       console.error('Failed to fetch users:', error);
       setAvailableUsers([]);
@@ -201,11 +206,9 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
             
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
-                <SelectTrigger className="border-accent/30 focus:border-primary">
+              <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>                <SelectTrigger className="border-accent/30 focus:border-primary">
                   <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
+                </SelectTrigger>                <SelectContent>
                   <SelectItem value="to_do">To Do</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
@@ -224,9 +227,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
               onChange={handleChange}
               className="border-accent/30 focus:border-primary"
             />
-          </div>
-
-          {/* User Assignment Section */}
+          </div>          {/* User Assignment Section */}
           {canAssignUsers && !taskToEdit && availableUsers.length > 0 && (
             <div className="space-y-2">
               <Label>

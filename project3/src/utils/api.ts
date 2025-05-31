@@ -83,7 +83,12 @@ export const authAPI = {
 // Admin API
 export const adminAPI = {
   getAllUsers: () => apiRequest('/api/v1/admin/users'),
-  getUsersByDepartment: (department: string) => apiRequest(`/api/v1/admin/users/by-department?department=${encodeURIComponent(department)}`),
+  getUsersByDepartment: (department: string) => {
+    if (!department) {
+      throw new Error('Department is required');
+    }
+    return apiRequest(`/api/v1/admin/users/by-department?department=${encodeURIComponent(department)}`);
+  },
   getUserById: (userId: string) => apiRequest(`/api/v1/admin/users/${userId}`),
   createUser: (userData: any) => apiRequest('/api/v1/admin/users', {
     method: 'POST',
@@ -99,6 +104,12 @@ export const adminAPI = {
   changeUserRole: (userId: string, role: string) => apiRequest(`/api/v1/admin/users/${userId}/role?role=${role}`, {
     method: 'PUT'
   }),
+};
+
+// PROJECT_LEADER API - specific endpoints for project leaders
+export const projectLeaderAPI = {
+  getCurrentUser: () => apiRequest('/api/v1/inter-communication/current-user-dto'),
+  getUsersInMyDepartment: () => apiRequest('/api/v1/project-leader/users/my-department'),
 };
 
 // Demo/Testing API
@@ -122,6 +133,8 @@ export const projectAPI = {
   removeMember: (projectId: string, userId: string) => apiRequest(`/api/v1/project/${projectId}/remove-member/${userId}`, { method: 'DELETE' }),
   getActiveProjectForUser: (userId: string) => apiRequest(`/api/v1/project/inter-communication/active-project/${userId}`),
   getCompletedProjectsForUser: (userId: string) => apiRequest(`/api/v1/project/inter-communication/completed-projects/${userId}`),
+  // New endpoint for PROJECT_LEADERs to get users associated with their projects
+  getUsersAssociatedWithProject: (projectId: string) => apiRequest(`/api/v1/project/inter-communication/get-user-association-with-task-and-project/${projectId}`),
 };
 
 // Task API

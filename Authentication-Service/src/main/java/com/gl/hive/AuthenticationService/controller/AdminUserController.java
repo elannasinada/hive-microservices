@@ -30,10 +30,8 @@ public class AdminUserController {
     private final UserRepository userRepository;
     private final RolesRepository rolesRepository;
     private final DepartmentsRepository departmentsRepository;
-    private final UserService userService;
-
-    @GetMapping
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    private final UserService userService;    @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_PROJECT_LEADER')")
     public List<User> getAllUsers() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
@@ -63,8 +61,7 @@ public class AdminUserController {
         } catch (IllegalArgumentException e) {
             log.error("Invalid department: {}", department);
             return List.of(); // Return empty list for invalid department
-        }
-    }
+        }    }
 
     @GetMapping("/{userId}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")

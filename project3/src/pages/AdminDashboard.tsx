@@ -107,21 +107,6 @@ const AdminDashboard = () => {
   }, [user?.department]); // Rerun effect if the user's department changes
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Tab became visible, refetching data...');
-        fetchData();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [fetchData]); // Depend on fetchData to ensure the correct function is called
-
-  useEffect(() => {
     // Filter users based on search term and role filter
     let filtered = users;
 
@@ -271,7 +256,11 @@ const AdminDashboard = () => {
                     </Button>
                   </DialogTrigger>
                   {/* Render the AddUserForm inside the Dialog */}
-                  <AddUserForm onClose={() => setShowAddUserModal(false)} onUserAdded={handleUserAdded} />
+                  <AddUserForm
+                    onClose={() => setShowAddUserModal(false)}
+                    onUserAdded={handleUserAdded}
+                    adminDepartment={user?.department || 'Unknown'} // Provide a default value
+                  />
                 </Dialog>
 
               </div>
