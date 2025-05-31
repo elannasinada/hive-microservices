@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Dialog, DialogTrigger } from '@/components/ui/dialog'; // Assuming you 
 import AdminStats from '@/components/AdminStats';
 // Import the AddUserForm component
 import AddUserForm from '@/components/AddUserForm';
+import EditUserModal from '@/components/EditUserModal';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -22,17 +23,17 @@ const AdminDashboard = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [roleChangeLoading, setRoleChangeLoading] = useState<string | null>(null);
-  const [activationLoading, setActivationLoading] = useState<string | null>(null);  
-  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState<string | null>(null);  const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-
   // State for the Add User modal
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  
+  // State for the Edit User modal
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   // Function to fetch user data - automatically filters by admin's department by default
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -50,13 +51,15 @@ const AdminDashboard = () => {
       }
       
       console.log('Successfully fetched from admin API endpoint:', allUsers.length, 'users');
-      
-      // Format and validate each user object
+        // Format and validate each user object
       const formattedUsers = allUsers.map((user: any) => ({
         userId: user.userId || user.user_id || user.id,
-        username: user.username || 'Unknown User',
+        username: user.actualUsername || user.username || 'Unknown User',
+        actualUsername: user.actualUsername || user.username || 'Unknown User',
         email: user.email || 'No Email',
-        roles: Array.isArray(user.roles) ? user.roles : (user.roles ? [user.roles] : [{ role: 'ROLE_TEAM_MEMBER' }]),
+        roles: Array.isArray(user.roles) ?
+            user.roles.map((r: any) => typeof r === 'string' ? { role: r } : r) :
+            (user.roles ? (typeof user.roles === 'string' ? [{ role: user.roles }] : [user.roles]) : [{ role: 'ROLE_TEAM_MEMBER' }]),
         active: user.active !== false, // Default to active unless explicitly false
         departments: user.departments || []
       }));
@@ -98,11 +101,10 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
-
+  }, [user]);
   useEffect(() => {
     fetchData(); // Initial data fetch
-  }, [user && user.department]); // Rerun effect if the user's department changes
+  }, [user?.department]); // Rerun effect if the user's department changes
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -136,55 +138,8 @@ const AdminDashboard = () => {
                   (typeof role === 'string' ? role : role.role)?.toLowerCase().includes(roleFilter.toLowerCase().replace('role_', ''))
               )
       );
-    }
-
-    setFilteredUsers(filtered);
+    }    setFilteredUsers(filtered);
   }, [users, searchTerm, roleFilter]);
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    setRoleChangeLoading(userId);
-    try {
-      await adminAPI.changeUserRole(userId, newRole);
-      
-      setUsers((prev) => prev.map((u) =>
-          u.userId === userId ? { ...u, roles: [{ role: newRole }] } : u
-      ));
-      toast({
-        title: "Success!",
-        description: "User role updated successfully."
-      });
-    } catch (error: any) {
-      console.error('Failed to change role:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user role. Please check your admin permissions.",
-        variant: "destructive"
-      });
-    }
-    setRoleChangeLoading(null);
-  };
-
-  const handleActivationToggle = async (userId: string, active: boolean) => {
-    setActivationLoading(userId);
-    try {
-      await adminAPI.toggleUserActivation(userId, active);
-      
-      setUsers((prev) => prev.map((u) =>
-          u.userId === userId ? { ...u, active } : u
-      ));
-      toast({
-        title: "Success!",
-        description: `User ${active ? 'activated' : 'deactivated'} successfully.`
-      });
-    } catch (error: any) {
-      console.error('Failed to toggle activation:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user status. Please check your admin permissions.",
-        variant: "destructive"
-      });
-    }
-    setActivationLoading(null);
-  };
 
   const getUserRoleDisplay = (user: any) => {
     if (!user.roles || user.roles.length === 0) return 'No Role';
@@ -200,10 +155,23 @@ const AdminDashboard = () => {
         <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">Inactive</span>
     );
   };
-
   // Function to refresh user list after adding a user
   const handleUserAdded = () => {
     setShowAddUserModal(false);
+    fetchData(); // Refresh the list
+  };
+  // Function to handle opening edit modal
+  const handleEditUser = (user: any) => {
+    console.log('handleEditUser called with user:', user);
+    setSelectedUser(user);
+    setShowEditUserModal(true);
+    console.log('Modal state should be true now');
+  };
+
+  // Function to handle closing edit modal and refreshing data
+  const handleUserUpdated = () => {
+    setShowEditUserModal(false);
+    setSelectedUser(null);
     fetchData(); // Refresh the list
   };
 
@@ -218,69 +186,69 @@ const AdminDashboard = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="border-accent/20 hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Users className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-secondary/70">Total Users</p>
-                    <p className="text-2xl font-bold text-primary">{users.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/*<div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">*/}
+          {/*  <Card className="border-accent/20 hover:shadow-md transition-shadow">*/}
+          {/*    <CardContent className="p-6">*/}
+          {/*      <div className="flex items-center">*/}
+          {/*        <div className="p-2 bg-primary/10 rounded-lg">*/}
+          {/*          <Users className="w-6 h-6 text-primary" />*/}
+          {/*        </div>*/}
+          {/*        <div className="ml-4">*/}
+          {/*          <p className="text-sm font-medium text-secondary/70">Total Users</p>*/}
+          {/*          <p className="text-2xl font-bold text-primary">{users.length}</p>*/}
+          {/*        </div>*/}
+          {/*      </div>*/}
+          {/*    </CardContent>*/}
+          {/*  </Card>*/}
 
-            <Card className="border-accent/20 hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-accent/20 rounded-lg">
-                    <Shield className="w-6 h-6 text-secondary" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-secondary/70">Active Projects</p>
-                    <p className="text-2xl font-bold text-primary">{projects.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/*  <Card className="border-accent/20 hover:shadow-md transition-shadow">*/}
+          {/*    <CardContent className="p-6">*/}
+          {/*      <div className="flex items-center">*/}
+          {/*        <div className="p-2 bg-accent/20 rounded-lg">*/}
+          {/*          <Shield className="w-6 h-6 text-secondary" />*/}
+          {/*        </div>*/}
+          {/*        <div className="ml-4">*/}
+          {/*          <p className="text-sm font-medium text-secondary/70">Active Projects</p>*/}
+          {/*          <p className="text-2xl font-bold text-primary">{projects.length}</p>*/}
+          {/*        </div>*/}
+          {/*      </div>*/}
+          {/*    </CardContent>*/}
+          {/*  </Card>*/}
 
-            <Card className="border-accent/20 hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <BarChart3 className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-secondary/70">Active Users</p>
-                    <p className="text-2xl font-bold text-primary">
-                      {users.filter(u => u.active).length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/*  <Card className="border-accent/20 hover:shadow-md transition-shadow">*/}
+          {/*    <CardContent className="p-6">*/}
+          {/*      <div className="flex items-center">*/}
+          {/*        <div className="p-2 bg-green-100 rounded-lg">*/}
+          {/*          <BarChart3 className="w-6 h-6 text-green-600" />*/}
+          {/*        </div>*/}
+          {/*        <div className="ml-4">*/}
+          {/*          <p className="text-sm font-medium text-secondary/70">Active Users</p>*/}
+          {/*          <p className="text-2xl font-bold text-primary">*/}
+          {/*            {users.filter(u => u.active).length}*/}
+          {/*          </p>*/}
+          {/*        </div>*/}
+          {/*      </div>*/}
+          {/*    </CardContent>*/}
+          {/*  </Card>*/}
 
-            <Card className="border-accent/20 hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <Settings className="w-6 h-6 text-orange-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-secondary/70">Admins</p>
-                    <p className="text-2xl font-bold text-primary">
-                      {users.filter(u => u.roles?.some((r: any) =>
-                          (typeof r === 'string' ? r : r.role)?.includes('ADMIN')
-                      )).length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/*  <Card className="border-accent/20 hover:shadow-md transition-shadow">*/}
+          {/*    <CardContent className="p-6">*/}
+          {/*      <div className="flex items-center">*/}
+          {/*        <div className="p-2 bg-orange-100 rounded-lg">*/}
+          {/*          <Settings className="w-6 h-6 text-orange-600" />*/}
+          {/*        </div>*/}
+          {/*        <div className="ml-4">*/}
+          {/*          <p className="text-sm font-medium text-secondary/70">Admins</p>*/}
+          {/*          <p className="text-2xl font-bold text-primary">*/}
+          {/*            {users.filter(u => u.roles?.some((r: any) =>*/}
+          {/*                (typeof r === 'string' ? r : r.role)?.includes('ADMIN')*/}
+          {/*            )).length}*/}
+          {/*          </p>*/}
+          {/*        </div>*/}
+          {/*      </div>*/}
+          {/*    </CardContent>*/}
+          {/*  </Card>*/}
+          {/*</div>*/}
 
           {/* User Management */}
           <Card className="border-accent/20 mb-8">
@@ -363,7 +331,7 @@ const AdminDashboard = () => {
                         <table className="w-full text-sm">
                           <thead>
                           <tr className="border-b border-accent/20">
-                            <th className="text-left py-3 px-2 font-medium text-secondary">User ID</th>
+                            <th className="text-left py-3 px-2 font-medium text-secondary">N°</th>
                             <th className="text-left py-3 px-2 font-medium text-secondary">Username</th>
                             <th className="text-left py-3 px-2 font-medium text-secondary">Email</th>
                             <th className="text-left py-3 px-2 font-medium text-secondary">Role</th>
@@ -391,33 +359,15 @@ const AdminDashboard = () => {
                             {getUserRoleDisplay(user)}
                           </span>
                                 </td>
-                                <td className="py-3 px-2">{getStatusBadge(user.active)}</td>
-                                <td className="py-3 px-2">
-                                  <div className="flex items-center space-x-2">                                    <select
-                                        aria-label="Change user role"
-                                        title="Change user role"
-                                        value={user.roles && user.roles.length > 0 ?
-                                            (typeof user.roles[0] === 'string' ? user.roles[0] : user.roles[0].role) : ''}
-                                        onChange={e => handleRoleChange(user.userId, e.target.value)}
-                                        disabled={roleChangeLoading === user.userId}
-                                        className="border border-accent/30 rounded-md px-2 py-1 text-xs focus:border-primary focus:outline-none"
-                                    >
-                                      <option value="ROLE_ADMIN">Admin</option>
-                                      <option value="ROLE_PROJECT_LEADER">Project Leader</option>
-                                      <option value="ROLE_TEAM_MEMBER">Team Member</option>
-                                    </select>
-                                    <Button
-                                        onClick={() => handleActivationToggle(user.userId, !user.active)}
-                                        disabled={activationLoading === user.userId}
-                                        variant={user.active ? 'destructive' : 'default'}
-                                        size="sm"
-                                    >
-                                      {activationLoading === user.userId ?
-                                          (user.active ? 'Deactivating...' : 'Activating...') :
-                                          (user.active ? 'Deactivate' : 'Activate')
-                                      }
-                                    </Button>
-                                  </div>
+                                <td className="py-3 px-2">{getStatusBadge(user.active)}</td>                                <td className="py-3 px-2">
+                                  <Button
+                                    onClick={() => handleEditUser(user)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                  >
+                                    Actions
+                                  </Button>
                                 </td>
                               </tr>
                           ))}
@@ -427,11 +377,17 @@ const AdminDashboard = () => {
                   )
               )}
             </CardContent>
-          </Card>
-
-          {/* Statistics Section */}
+          </Card>          {/* Statistics Section */}
           <AdminStats users={users} projects={projects} tasks={tasks} />
         </div>
+
+        {/* Edit User Modal */}
+        <EditUserModal
+          isOpen={showEditUserModal}
+          onClose={() => setShowEditUserModal(false)}
+          user={selectedUser}
+          onUserUpdated={handleUserUpdated}
+        />
       </div>
   );
 };

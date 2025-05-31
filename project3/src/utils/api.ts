@@ -85,6 +85,10 @@ export const adminAPI = {
   getAllUsers: () => apiRequest('/api/v1/admin/users'),
   getUsersByDepartment: (department: string) => apiRequest(`/api/v1/admin/users/by-department?department=${encodeURIComponent(department)}`),
   getUserById: (userId: string) => apiRequest(`/api/v1/admin/users/${userId}`),
+  createUser: (userData: any) => apiRequest('/api/v1/admin/users', {
+    method: 'POST',
+    body: JSON.stringify(userData)
+  }),
   updateUser: (userId: string, userData: any) => apiRequest(`/api/v1/admin/users/${userId}`, {
     method: 'PUT',
     body: JSON.stringify(userData)

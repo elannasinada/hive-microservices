@@ -40,14 +40,14 @@ const Header = () => {
                                     Tasks
                                 </Link>
                                 )}
-                                {user?.roles.includes('ADMIN') && (
-                                    <Link
-                                        to="/admin"
-                                        className="text-secondary hover:text-primary transition-colors font-medium"
-                                    >
-                                        Admin Panel
-                                    </Link>
-                                )}
+                                {/*{user?.roles.includes('ADMIN') && (*/}
+                                {/*    <Link*/}
+                                {/*        to="/admin"*/}
+                                {/*        className="text-secondary hover:text-primary transition-colors font-medium"*/}
+                                {/*    >*/}
+                                {/*        Admin Panel*/}
+                                {/*    </Link>*/}
+                                {/*)}*/}
                                 {/*{user?.roles.includes('PROJECT_LEADER') && (*/}
                                 {/*    <Link*/}
                                 {/*        to="/leader"*/}
