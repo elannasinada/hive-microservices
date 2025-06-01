@@ -17,6 +17,7 @@ interface TaskListProps {
 }
 
 const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
+  console.log('TaskList received tasks:', tasks);
   const { user: currentUser } = useAuth();
   const [taskStats, setTaskStats] = useState({
     totalTasks: 0,
@@ -289,10 +290,8 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
 
   // Filter tasks by selected project and project time filter
   const filteredTasksByProject = selectedProjectId === 'all'
-    ? normalizedTasks.filter(task => filteredProjectIds.includes(String(task.projectId)))
-    : normalizedTasks.filter(task => {
-        return String(task.projectId) === String(selectedProjectId) && filteredProjectIds.includes(String(task.projectId));
-      });
+    ? normalizedTasks // Show all tasks if 'all' is selected
+    : normalizedTasks.filter(task => String(task.projectId) === String(selectedProjectId));
 
   // Fetch only the authenticated project leader's projects for the dropdown
   useEffect(() => {

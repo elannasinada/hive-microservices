@@ -14,6 +14,7 @@ import TaskList from '@/components/TaskList';
 import { PieChart as RechartsPieChart, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Pie } from 'recharts';
 
 const LeaderDashboard = () => {
+  console.log('LeaderDashboard mounted');
   const { user } = useAuth();
   const [myProjects, setMyProjects] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
@@ -58,6 +59,7 @@ const LeaderDashboard = () => {
         leaderProjects.map(async (project: any) => {
           try {
             const projectTasks = await taskAPI.search({ projectId: project.projectId });
+            console.log('Fetched tasks for project', project.projectId, projectTasks);
             allProjectTasks = allProjectTasks.concat(projectTasks || []);
           } catch (error) {
             console.error(`Failed to fetch tasks for project ${project.projectId}:`, error);
@@ -66,6 +68,7 @@ const LeaderDashboard = () => {
       );
       
       setAllTasks(allProjectTasks);
+      console.log('allTasks after loading:', allProjectTasks);
       
       // Calculate comprehensive statistics using getProjectStatus
       const uniqueMembers = new Set();
@@ -138,6 +141,8 @@ const LeaderDashboard = () => {
     if (projectTimeFilter === 'future') return status === 'future';
     return true;
   });
+
+  console.log('Passing tasks to TaskList:', allTasks.filter(task => selectedProjectId === 'all' || task.projectId === selectedProjectId));
 
   return (
     <div className="min-h-screen bg-background">

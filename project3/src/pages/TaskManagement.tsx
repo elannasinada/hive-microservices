@@ -13,6 +13,7 @@ import KanbanBoard from '@/components/KanbanBoard';
 import TaskListView from '@/components/TaskListView';
 import TaskForm from '@/components/TaskForm';
 import { toast } from '@/hooks/use-toast';
+import TaskList from '@/components/TaskList';
 
 enum TaskStatus {
   TO_DO = 'TO_DO',
@@ -29,6 +30,7 @@ enum TaskPriority {
 }
 
 const TaskManagement = () => {
+  console.log('TaskManagement mounted');
   const { user } = useAuth();
   const [tasks, setTasks] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -46,6 +48,7 @@ const TaskManagement = () => {
   const canEditTasks = user && user.roles.length > 0; // Any logged-in user can edit existing tasks
 
   useEffect(() => {
+    console.log('TaskManagement useEffect running, user:', user);
     loadData();
   }, [user]);
 
@@ -101,14 +104,18 @@ const TaskManagement = () => {
         ...task,
         projectId: String(task.projectId || (task.project && (task.project.projectId || task.project.id)) || ''),
       }));
+      console.log('TaskManagement loaded tasks:', normalizedTasks);
       // For team members, filter to only assigned tasks
       if (!(user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'))) {
-        setTasks(normalizedTasks.filter((task) => {
+        const filtered = normalizedTasks.filter((task) => {
           if (!task.assignedUsers) return false;
           return Object.keys(task.assignedUsers).includes(user.id.toString());
-        }));
+        });
+        setTasks(filtered);
+        console.log('TaskManagement setTasks (team member):', filtered);
       } else {
         setTasks(normalizedTasks);
+        console.log('TaskManagement setTasks (admin/leader):', normalizedTasks);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -182,41 +189,11 @@ const TaskManagement = () => {
   };
 
   const applyFilters = () => {
-    console.log('Applying filters to tasks:', tasks.length);
-    console.log('Status filter:', statusFilter);
-    console.log('Priority filter:', priorityFilter);
-    console.log('Project filter:', projectFilter);
-    console.log('Search query:', searchQuery);
-    
-    // Start with all normalized tasks
-    let filtered = [...tasks];
-
-    // Search filter: Use taskName and description
-    if (searchQuery) {
-      const lowerCaseQuery = searchQuery.toLowerCase();
-      filtered = filtered.filter(task =>
-          task.taskName?.toLowerCase().includes(lowerCaseQuery) ||
-          task.description?.toLowerCase().includes(lowerCaseQuery)
-      );
-    }
-
-    // Use our centralized filtering function for status filters - consistent with TeamDashboard
-    if (statusFilter !== 'all') {
-      filtered = filterTasksByCategory(filtered, statusFilter);
-    }
-
-    // Priority filter: Use taskPriority (case-insensitive check)
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(task => task.taskPriority?.toUpperCase() === priorityFilter.toUpperCase());
-    }
-
-    // Project filter: Use projectId with string comparison for type safety (like TeamDashboard)
-    if (projectFilter !== 'all') {
-      filtered = filtered.filter(task => String(task.projectId) === String(projectFilter));
-    }
-
-    console.log('Filtered tasks count:', filtered.length);
-    setFilteredTasks(filtered);
+    // TEMP: Bypass all filters for debugging
+    setFilteredTasks(tasks);
+    // Original filter logic is commented out below:
+    // console.log('Applying filters to tasks:', tasks.length);
+    // ...
   };
 
   const handleTaskUpdate = async (taskId: string, updates: any) => {
@@ -357,58 +334,6 @@ const TaskManagement = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-            <Card className="border-accent/20">
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">{stats.totalTasks}</p>
-                  <p className="text-xs text-secondary/70">Total Tasks</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-accent/20">
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">{stats.inProgressTasks}</p>
-                  <p className="text-xs text-secondary/70">In Progress</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-accent/20">
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-red-600">{stats.overdueTasks}</p>
-                  <p className="text-xs text-secondary/70">Overdue</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-accent/20">
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">{stats.completedTasks}</p>
-                  <p className="text-xs text-secondary/70">Completed</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-accent/20">
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-purple-600">{stats.toDoTasks}</p>
-                  <p className="text-xs text-secondary/70">To Do Tasks</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-accent/20">
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-600">{stats.cancelledTasks}</p>
-                  <p className="text-xs text-secondary/70">Cancelled Tasks</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Filters */}
           <Card className="border-accent/20">
             <CardContent className="p-6">
@@ -464,6 +389,61 @@ const TaskManagement = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Task List */}
+          <TaskList tasks={filteredTasks} onUpdate={loadData} user={user} />
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+            <Card className="border-accent/20">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-primary">{stats.totalTasks}</p>
+                  <p className="text-xs text-secondary/70">Total Tasks</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-accent/20">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">{stats.inProgressTasks}</p>
+                  <p className="text-xs text-secondary/70">In Progress</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-accent/20">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-red-600">{stats.overdueTasks}</p>
+                  <p className="text-xs text-secondary/70">Overdue</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-accent/20">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">{stats.completedTasks}</p>
+                  <p className="text-xs text-secondary/70">Completed</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-accent/20">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">{stats.toDoTasks}</p>
+                  <p className="text-xs text-secondary/70">To Do Tasks</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-accent/20">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-600">{stats.cancelledTasks}</p>
+                  <p className="text-xs text-secondary/70">Cancelled Tasks</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* View Toggle */}
