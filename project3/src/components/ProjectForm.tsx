@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -67,9 +67,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
   const fetchAvailableUsers = async () => {
     try {
       console.log('ProjectForm: Fetching users for task assignment...');
-
+      
       let users = [];
-
+      
       if (user?.roles.includes('ADMIN') || user?.roles.includes('PROJECT_LEADER')) {
         // Both admins and project leaders can see all users
         try {
@@ -79,7 +79,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
         } catch (adminError) {
           console.warn('Admin API failed, falling back to auth API:', adminError);
           try {
-            users = await authAPI.getAllUsers();
+          users = await authAPI.getAllUsers();
             console.log('Successfully fetched users using auth API:', users.length);
           } catch (authError) {
             console.error('Both admin and auth APIs failed:', authError);
@@ -90,16 +90,27 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
         console.log('User does not have permission to assign tasks');
         setAvailableUsers([]);
         return;
-      }
-
-      // Format and set available users (following AdminDashboard pattern)
-      const formattedUsers = users.map((user: any) => ({
-        userId: user.userId || user.user_id || user.id,
-        username: user.actualUsername || user.username || 'Unknown User',
-        email: user.email || 'No Email',
-        department: user.department || (user.departments && user.departments.length > 0 ? user.departments[0].department : null),
-        roles: user.roles || []
-      }));
+      }      // Format and filter users - exclude ADMINs and PROJECT_LEADERs (only show TEAM_MEMBERs)
+      const formattedUsers = users
+        .map((user: any) => ({
+          userId: user.userId || user.user_id || user.id,
+          username: user.actualUsername || user.username || 'Unknown User',
+          email: user.email || 'No Email',
+          department: user.department || (user.departments && user.departments.length > 0 ? user.departments[0].department : null),
+          roles: user.roles || []
+        }))
+        .filter((user: any) => {
+          // Only include users who are TEAM_MEMBERs (exclude ADMINs and PROJECT_LEADERs)
+          const userRoles = Array.isArray(user.roles) 
+            ? user.roles.map((r: any) => typeof r === 'string' ? r : r.role)
+            : [];
+          
+          const isAdmin = userRoles.some((role: string) => role === 'ROLE_ADMIN' || role === 'ADMIN');
+          const isProjectLeader = userRoles.some((role: string) => role === 'ROLE_PROJECT_LEADER' || role === 'PROJECT_LEADER');
+          
+          // Only include if not admin or project leader
+          return !isAdmin && !isProjectLeader;
+        });
 
       setAvailableUsers(formattedUsers);
       console.log('Final available users:', formattedUsers.length);
@@ -145,19 +156,20 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
       // Create tasks if any
       if (tasks.length > 0) {
         for (const task of tasks) {
-          try {
-            const taskPayload = {
-              title: task.title,
+          try {            const taskPayload = {
+              taskName: task.title,
               description: task.description,
-              priority: task.priority,
-              status: task.status, // Will default to TO_DO as required
+              taskPriority: task.priority.toUpperCase(), // LOW, MEDIUM, HIGH
+              taskStatus: task.status === 'to_do' ? 'TO_DO' : 
+                         task.status === 'in_progress' ? 'IN_PROGRESS' : 
+                         task.status === 'completed' ? 'COMPLETED' : 
+                         (task.status as string).toUpperCase(),
               dueDate: task.dueDate || null
             };
 
             const createdTask = await taskAPI.create(projectId, taskPayload);
-            
-            // Assign task to selected users if any
-            if (task.assignedUsers.length > 0 && canAssignUsers) {
+              // Assign task to selected user if one is selected
+            if (task.assignedUsers.length > 0 && task.assignedUsers[0] && canAssignUsers) {
               try {
                 await taskAPI.assignToUsers({
                   taskId: createdTask.id || createdTask.taskId,
@@ -212,13 +224,10 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
       [field]: value
     });
   };
-
-  const handleUserAssignment = (userId: string, checked: boolean) => {
+  const handleUserAssignment = (userId: string) => {
     setCurrentTask(prev => ({
       ...prev,
-      assignedUsers: checked 
-        ? [...prev.assignedUsers, userId]
-        : prev.assignedUsers.filter(id => id !== userId)
+      assignedUsers: [userId] // Only one user can be assigned
     }));
   };
 
@@ -482,28 +491,36 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
                         </SelectContent>
                       </Select>
                     </div>                  </div>
-                  
-                  {/* User Assignment Section */}
+                    {/* User Assignment Section */}
                   {canAssignUsers && availableUsers.length > 0 && (
                     <div className="space-y-2">
                       <Label>
-                        Assign to Team Members
+                        Assign to Team Member
                         {user?.roles.includes('PROJECT_LEADER') && user?.department && 
                           ` in ${user.department}`
                         }
                       </Label>
                       <div className="border border-accent/30 rounded-md p-3 max-h-40 overflow-y-auto">
-                        <div className="space-y-2">
+                        <RadioGroup 
+                          value={currentTask.assignedUsers[0] || ""} 
+                          onValueChange={(value) => handleUserAssignment(value)}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="" id="no-assignment" />
+                              <Label htmlFor="no-assignment" className="text-sm font-normal cursor-pointer">
+                                No assignment (assign later)
+                              </Label>
+                            </div>
                           {availableUsers.map((assignableUser) => (
                             <div key={assignableUser.userId || assignableUser.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`task-user-${assignableUser.userId || assignableUser.id}`}
-                                checked={currentTask.assignedUsers.includes(String(assignableUser.userId || assignableUser.id))} // Ensure string comparison
-                                onCheckedChange={(checked) => handleUserAssignment(String(assignableUser.userId || assignableUser.id), !!checked)} // Ensure string assignment
+                                <RadioGroupItem 
+                                  value={String(assignableUser.userId || assignableUser.id)} 
+                                  id={`task-user-${assignableUser.userId || assignableUser.id}`}
                               />
                               <Label 
-                                htmlFor={`task-user-${assignableUser.userId || assignableUser.id}`}
-                                className="text-sm font-normal cursor-pointer"
+                                  htmlFor={`task-user-${assignableUser.userId || assignableUser.id}`}
+                                  className="text-sm font-normal cursor-pointer"
                               >
                                 {assignableUser.username} ({assignableUser.email})
                                 {assignableUser.department && (
@@ -515,9 +532,10 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
                             </div>
                           ))}
                         </div>
+                        </RadioGroup>
                       </div>
                       <p className="text-xs text-secondary/60">
-                        Select team members to assign this task to. You can assign tasks later if needed.
+                        Select one team member to assign this task to. You can change assignment later if needed.
                       </p>
                     </div>
                   )}
@@ -531,7 +549,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
                     </div>
                   )}
                   
-                  {canAssignUsers && availableUsers.length === 0 && (
+                    {canAssignUsers && availableUsers.length === 0 && (
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                       <p className="text-sm text-blue-800">
                         ℹ️ No team members available to assign tasks to. Possible reasons:
@@ -595,7 +613,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
                                 )}                                {task.assignedUsers.length > 0 && (
                                   <div className="mt-2 flex flex-wrap gap-1">
                                     <span className="text-xs text-secondary/60">Assigned to:</span>
-                                    {task.assignedUsers.slice(0, 3).map((userId) => {
+                                    {task.assignedUsers.map((userId) => {
                                       const assignedUser = availableUsers.find(u => (u.userId || u.id) === userId);
                                       return assignedUser ? (
                                         <Badge key={userId} variant="outline" className="text-xs px-1 py-0">
@@ -603,11 +621,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
                                         </Badge>
                                       ) : null;
                                     })}
-                                    {task.assignedUsers.length > 3 && (
-                                      <Badge variant="outline" className="text-xs px-1 py-0">
-                                        +{task.assignedUsers.length - 3} more
-                                      </Badge>
-                                    )}
                                   </div>
                                 )}
                                 <div className="flex items-center space-x-4 text-xs text-secondary/60">
@@ -620,7 +633,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
                                   {task.assignedUsers.length > 0 && (
                                     <span className="flex items-center">
                                       <User className="w-3 h-3 mr-1" />
-                                      {task.assignedUsers.length} assigned
+                                      Assigned
                                     </span>
                                   )}
                                 </div>

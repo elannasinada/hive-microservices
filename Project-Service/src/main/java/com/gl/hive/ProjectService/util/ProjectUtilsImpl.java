@@ -75,12 +75,26 @@ public class ProjectUtilsImpl implements ProjectUtils {
         // Get only active project members associated with the given project
         List<ProjectMembers> members = projectMembersRepository.findByProjectAndActiveTrue(project);
 
-        // Create a list of UserDto objects for the project members
+        // Create a list of UserDto objects for the project members, excluding PROJECT_LEADERs
         ArrayList<UserMembersDto> userDtos = new ArrayList<>();
         for (ProjectMembers projectMembers : members) {
+            // Skip if this is the project leader
+            if (projectMembers.getUserId().equals(project.getLeaderId())) {
+                continue;
+            }
+
             UserDTO memberUserDTO = authUserFeignClient.getUserDTOById(projectMembers.getUserId());
 
+            // Skip if user has PROJECT_LEADER role
+            boolean isProjectLeader = memberUserDTO.getRoles().stream()
+                    .anyMatch(role -> role.getRole().name().equals("PROJECT_LEADER") || 
+                                    role.getRole().name().equals("ROLE_PROJECT_LEADER"));
+            if (isProjectLeader) {
+                continue;
+            }
+
             UserMembersDto userDto = UserMembersDto.builder()
+                    .userId(memberUserDTO.getUserId())
                     .username(memberUserDTO.getUsername())
                     .role(memberUserDTO.getRoles()
                             .stream().map(roles -> roles.getRole().name()).toList()

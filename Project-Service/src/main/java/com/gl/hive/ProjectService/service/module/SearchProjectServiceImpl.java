@@ -74,12 +74,15 @@ public class SearchProjectServiceImpl implements SearchProjectService {
                 UserDTO leaderUserDTO = authUserFeignClient.getUserDTOById(project.getLeaderId());
                 return SearchResponse.builder()
                         .projectId(project.getProjectId())
+                        .leaderId(project.getLeaderId())
                         .projectName(project.getProjectName())
                         .projectDescription(project.getDescription())
                         .leaderName(leaderUserDTO.getUsername())
                         .members(new ProjectMembersDto(projectUtils.getUserDtoList(project)))
                         .commentDTOs(commentDTOs)
                         .progress(project.getProgress())
+                        .startDate(project.getStartDate())
+                        .endDate(project.getEndDate())
                         .build();
             } catch (Exception e) {
                 log.error("😖 uh oh... there seems to be an error: {{}} 😖", e.getMessage());
@@ -119,12 +122,15 @@ public class SearchProjectServiceImpl implements SearchProjectService {
 
                             return SearchResponse.builder()
                                     .projectId(project.getProjectId())
+                                    .leaderId(project.getLeaderId())
                                     .projectName(project.getProjectName())
                                     .projectDescription(project.getDescription())
                                     .leaderName(leaderName)
                                     .members(new ProjectMembersDto(projectUtils.getUserDtoList(project)))
                                     .commentDTOs(commentDTOs)
                                     .progress(project.getProgress())
+                                    .startDate(project.getStartDate())
+                                    .endDate(project.getEndDate())                                
                                     .build();
                         }
                 ).toList();

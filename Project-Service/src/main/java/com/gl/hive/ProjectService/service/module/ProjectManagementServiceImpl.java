@@ -34,7 +34,8 @@ import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ProjectManagementServiceImpl implements ProjectManagementService {
+public
+class ProjectManagementServiceImpl implements ProjectManagementService {
 
     private final UserProjectRoleRepository userProjectRoleRepository;
     private final ProjectMembersRepository projectMembersRepository;
@@ -165,7 +166,12 @@ public class ProjectManagementServiceImpl implements ProjectManagementService {
         if (!(roles.contains("ADMIN") || (roles.contains("PROJECT_LEADER") && project.getLeaderId().equals(currentUser.getUserId())))) {
             throw new com.gl.hive.shared.lib.exceptions.HiveException("Not authorized to update this project", org.springframework.http.HttpStatus.FORBIDDEN, 403);
         }
-        throw new com.gl.hive.shared.lib.exceptions.HiveException("Not implemented", org.springframework.http.HttpStatus.NOT_IMPLEMENTED, 501);
+        // Update fields
+        if (projectRequest.getProjectName() != null) project.setProjectName(projectRequest.getProjectName());
+        if (projectRequest.getProjectDescription() != null) project.setDescription(projectRequest.getProjectDescription());
+        if (projectRequest.getStartDate() != null) project.setStartDate(projectRequest.getStartDate());
+        if (projectRequest.getEndDate() != null) project.setEndDate(projectRequest.getEndDate());
+        projectRepository.save(project);
     }
 
     @Override

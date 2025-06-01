@@ -3,16 +3,46 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Calendar, Users, Plus, Search, Target, ClipboardList } from 'lucide-react';
+import { Calendar, Users, Plus, Search, Target, ClipboardList, MoreHorizontal } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { projectAPI } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
 import TaskForm from './TaskForm';
+import ProjectEditForm from './ProjectEditForm';
 
 interface ProjectListProps {
   projects: any[];
   onUpdate: () => void;
+}
+
+// Helper to format dates
+function formatDate(date: any) {
+  if (!date) return 'No date available';
+  try {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  } catch {
+    return date;
+  }
+}
+
+
+function calculateDuration(startDate, endDate) {
+  if (!startDate || !endDate) return "Unknown duration";
+  try {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 +
+      (end.getMonth() - start.getMonth());
+    const roundedMonths = diffMonths + (end.getDate() >= start.getDate() ? 0 : -1) + 1;
+    return roundedMonths <= 0 ? "Less than a month" : `${roundedMonths} ${roundedMonths === 1 ? 'month' : 'months'}`;
+  } catch {
+    return "Unknown duration";
+  }
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
@@ -22,6 +52,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [projectTasks, setProjectTasks] = useState<{ [projectId: string]: any[] }>({});
   
+  // New: Cache members for each project
+  const [projectMembersById, setProjectMembersById] = useState<{ [projectId: string]: any[] }>({});
+
   // Member management state
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [showMemberModal, setShowMemberModal] = useState(false);
@@ -34,6 +67,10 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
   // Task management state
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedProjectForTask, setSelectedProjectForTask] = useState<any>(null);
+
+  // Edit project state
+  const [showEditProjectModal, setShowEditProjectModal] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<any>(null);
 
   // Check if user can manage tasks
   const canManageTasks = user && (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'));
@@ -62,6 +99,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
 
   const displayProjects = searchResults.length > 0 ? searchResults : projects;
 
+  // Fetch tasks for all displayed projects
   useEffect(() => {
     const fetchTasksForProjects = async () => {
       const tasksByProject: { [projectId: string]: any[] } = {};
@@ -83,12 +121,23 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
     if (displayProjects.length > 0) fetchTasksForProjects();
   }, [displayProjects]);
 
+  // Fetch members for a project and cache them
   const fetchMembers = async (projectId: string) => {
     setMemberLoading(true);
     setMemberError(null);
     try {
       const data = await projectAPI.listMembers(projectId);
-      setMembers(data.projectMembers || []);
+      // Filter out PROJECT_LEADER users from the members list
+      const filteredMembers = (data.projectMembers || []).filter((member: any) => {
+        const userRoles = Array.isArray(member.roles)
+          ? member.roles.map((r: any) => typeof r === 'string' ? r : r.role)
+          : [];
+        const isProjectLeader = userRoles.some((role: string) =>
+          role === 'ROLE_PROJECT_LEADER' || role === 'PROJECT_LEADER');
+        return !isProjectLeader;
+      });
+      setMembers(filteredMembers);
+      setProjectMembersById(prev => ({ ...prev, [projectId]: filteredMembers }));
     } catch (err: any) {
       setMemberError('Failed to load project members');
     } finally {
@@ -96,12 +145,38 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
     }
   };
 
+  // Fetch team members (for adding new members)
   const fetchTeamMembers = async () => {
     setMemberLoading(true);
     setMemberError(null);
     try {
-      const all = await (await import('@/utils/api')).demoAPI.getTeamMembers();
-      setTeamMembers(all || []);
+      let users = [];
+      try {
+        users = await (await import('@/utils/api')).adminAPI.getAllUsers();
+      } catch (adminError) {
+        try {
+          users = await (await import('@/utils/api')).authAPI.getAllUsers();
+        } catch (authError) {
+          users = [];
+        }
+      }
+      const formattedUsers = users
+        .map((user: any) => ({
+          userId: user.userId || user.user_id || user.id,
+          username: user.actualUsername || user.username || 'Unknown User',
+          email: user.email || 'No Email',
+          department: user.department || (user.departments && user.departments.length > 0 ? user.departments[0].department : null),
+          roles: user.roles || []
+        }))
+        .filter((user: any) => {
+          const userRoles = Array.isArray(user.roles)
+            ? user.roles.map((r: any) => typeof r === 'string' ? r : r.role)
+            : [];
+          const isAdmin = userRoles.some((role: string) => role === 'ROLE_ADMIN' || role === 'ADMIN');
+          const isProjectLeader = userRoles.some((role: string) => role === 'ROLE_PROJECT_LEADER' || role === 'PROJECT_LEADER');
+          return !isAdmin && !isProjectLeader;
+        });
+      setTeamMembers(formattedUsers || []);
     } catch (err: any) {
       setMemberError('Failed to load team members');
     } finally {
@@ -116,25 +191,37 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
     }
   }, [showMemberModal, selectedProject]);
 
+  // Add member and refresh cache
   const handleAddMember = async (userId: string) => {
     setActionLoading(true);
     try {
       await projectAPI.addMember(selectedProject.projectId, userId);
       toast({ title: 'Success', description: 'Member added.' });
-      fetchMembers(selectedProject.projectId);
+      fetchMembers(selectedProject.projectId); // refresh cache
       onUpdate();
-    } catch {
-      toast({ title: 'Error', description: 'Failed to add member', variant: 'destructive' });
+    } catch (err: any) {
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.response?.data?.age ||
+        err?.message ||
+        'Failed to add member';
+      toast({
+        title: 'Error',
+        description: errorMsg,
+        variant: 'destructive'
+      });
     } finally {
       setActionLoading(false);
     }
   };
+
+  // Remove member and refresh cache
   const handleRemoveMember = async (userId: string) => {
     setActionLoading(true);
     try {
       await projectAPI.removeMember(selectedProject.projectId, userId);
       toast({ title: 'Success', description: 'Member removed.' });
-      fetchMembers(selectedProject.projectId);
+      fetchMembers(selectedProject.projectId); // refresh cache
       onUpdate();
     } catch {
       toast({ title: 'Error', description: 'Failed to remove member', variant: 'destructive' });
@@ -152,13 +239,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
     setShowTaskForm(false);
     setSelectedProjectForTask(null);
     onUpdate();
-    // Refresh project tasks
     if (selectedProjectForTask) {
-      const projectId = selectedProjectForTask.id || selectedProjectForTask.projectId;
-      setTimeout(() => {
-        // Refresh tasks for this project
-        window.location.reload(); // Simple refresh - could be optimized
-      }, 500);
+      window.location.reload();
     }
   };
 
@@ -205,20 +287,36 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
           if (progress > 70) progressColor = 'bg-green-500';
           else if (progress > 30) progressColor = 'bg-yellow-500';
 
-          // For start/end date, fallback to tasks if not present in project
-          const startDate = project.startDate || (tasks.length > 0 ? tasks.reduce((min, t) => t.createdAt < min ? t.createdAt : min, tasks[0].createdAt) : null);
-          const endDate = project.endDate || (tasks.length > 0 ? tasks.reduce((max, t) => t.dueDate > max ? t.dueDate : max, tasks[0].dueDate) : null);
+          // Any PROJECT_LEADER can manage members, not just those who are members of the project
+          const canManageMembers = user && (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'));
 
-          const canManageMembers = user && (user.roles.includes('ADMIN') || (user.roles.includes('PROJECT_LEADER') && user.id === project.leaderId));
+          // Use formatted dates
+          const formattedStartDate = formatDate(project.startDate);
+          const formattedEndDate = formatDate(project.endDate);
+            const duration = calculateDuration(project.startDate, project.endDate);
+
+          // Use the correct member count
+          const memberCount = (project.members && Array.isArray(project.members.projectMembers))
+            ? project.members.projectMembers.length
+            : (project.memberCount || 0);
 
           return (
             <Card key={projectId} className="border-accent/20 hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-primary text-lg">{project.projectName}</CardTitle>
-                  <Badge variant="outline" className="border-accent text-secondary">
-                    Active
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="border-accent text-secondary">
+                      Active
+                    </Badge>
+                    <button
+                      className="p-1 rounded hover:bg-accent/10"
+                      title="Edit Project"
+                      onClick={() => { setProjectToEdit(project); setShowEditProjectModal(true); }}
+                    >
+                      <MoreHorizontal className="w-5 h-5 text-secondary" />
+                    </button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -228,13 +326,17 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                 <div className="flex items-center justify-between text-xs text-secondary/60 mb-2">
                   <span>
                     <Calendar className="inline w-4 h-4 mr-1" />
-                    {startDate ? new Date(startDate).toLocaleDateString() : 'No start date'}
+                    {formattedStartDate}
                   </span>
                   <span>
                     <Calendar className="inline w-4 h-4 mr-1" />
-                    {endDate ? new Date(endDate).toLocaleDateString() : 'No deadline'}
+                    {formattedEndDate}
                   </span>
-                </div>                {/* Project Statistics */}
+                  <span>
+                    Duration: {duration}
+                  </span>
+                </div>
+                {/* Project Statistics */}
                 <div className="grid grid-cols-3 gap-3 mb-4 p-3 bg-gray-50/50 rounded-lg">
                   <div className="text-center">
                     <div className="text-lg font-bold text-blue-600">
@@ -255,7 +357,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                     <div className="text-xs text-secondary/60">Completed</div>
                   </div>
                 </div>
-                
                 <div className="mb-2">
                   <div className="flex justify-between text-xs mb-1">
                     <span>Overall Progress</span>
@@ -263,28 +364,25 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                   </div>
                   <Progress value={progress} indicatorClassName={progressColor} />
                 </div>
-                
                 <div className="flex items-center text-secondary/60 text-sm mb-3">
-                  <Users className="w-4 h-4 mr-2" />
-                  {project.memberCount || 0} members
+                  <Users className="w-4 h-4 mr-2"/>
+                  {memberCount} members
                   <span className="mx-2">•</span>
-                  <ClipboardList className="w-4 h-4 mr-1" />
+                  <ClipboardList className="w-4 h-4 mr-1"/>
                   {totalTasks} task{totalTasks !== 1 ? 's' : ''} total
                 </div>
-                
                 <div className="space-y-2">
                   {canManageMembers && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full border-primary text-primary hover:bg-primary hover:text-white"
-                      onClick={() => { setSelectedProject(project); setShowMemberModal(true); }}
+                      <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-primary text-primary hover:bg-primary hover:text-white"
+                          onClick={() => { setSelectedProject(project); setShowMemberModal(true); }}
                     >
                       <Users className="w-4 h-4 mr-2" />
                       Manage Members
                     </Button>
                   )}
-                  
                   {canManageTasks && (
                     <Button
                       variant="outline"
@@ -334,7 +432,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                     {members.length === 0 && <li className="text-secondary/60">No members yet.</li>}
                     {members.map((m) => (
                       <li key={m.userId} className="flex items-center justify-between py-1">
-                        <span>{m.username} ({m.email})</span>
+                        <span>{m.username}</span>
                         <Button size="sm" variant="destructive" disabled={actionLoading} onClick={() => handleRemoveMember(m.userId)}>
                           Remove
                         </Button>
@@ -343,11 +441,11 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                   </ul>
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Add TEAM_MEMBER</h3>
+                  <h3 className="font-semibold mb-2">Add a Team Member</h3>
                   <ul>
                     {teamMembers.filter((tm) => !members.some((m) => m.userId === tm.userId)).map((tm) => (
                       <li key={tm.userId} className="flex items-center justify-between py-1">
-                        <span>{tm.username} ({tm.email})</span>
+                        <span>{tm.username}</span>
                         <Button size="sm" disabled={actionLoading} onClick={() => handleAddMember(tm.userId)}>
                           Add
                         </Button>
@@ -356,7 +454,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                   </ul>
                 </div>
               </>
-            )}            <Button className="mt-4" onClick={() => setShowMemberModal(false)}>Close</Button>
+            )}
+            <Button className="mt-4" onClick={() => setShowMemberModal(false)}>Close</Button>
           </div>
         </div>
       )}
@@ -367,6 +466,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
           onClose={() => setShowTaskForm(false)}
           onSuccess={handleTaskCreated}
           projects={[selectedProjectForTask]}
+        />
+      )}
+
+      {/* Edit Project Modal */}
+      {showEditProjectModal && projectToEdit && (
+        <ProjectEditForm
+          project={projectToEdit}
+          onClose={() => { setShowEditProjectModal(false); setProjectToEdit(null); }}
+          onSuccess={() => { setShowEditProjectModal(false); setProjectToEdit(null); onUpdate(); }}
         />
       )}
     </div>

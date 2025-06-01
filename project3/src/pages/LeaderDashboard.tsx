@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +20,6 @@ const LeaderDashboard = () => {
   const [allTasks, setAllTasks] = useState<any[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
   const [showProjectForm, setShowProjectForm] = useState(false);
-  const [showTaskForm, setShowTaskForm] = useState(false);
   const [stats, setStats] = useState({
     totalProjects: 0,
     totalMembers: 0,
@@ -43,23 +41,21 @@ const LeaderDashboard = () => {
   useEffect(() => {
     // Update task stats when project filter changes
     updateTaskStats(allTasks, selectedProjectId);
-  }, [selectedProjectId, allTasks]);
-  const loadData = async () => {
+  }, [selectedProjectId, allTasks]);  const loadData = async () => {
     try {
       const projects = await projectAPI.search();
+      // Backend already filters projects for PROJECT_LEADERs, but double-check for safety
       const leaderProjects = projects.filter((p: any) => p.leaderId === user?.id);
-      setMyProjects(leaderProjects);
-      
-      // Fetch tasks for all projects
+      setMyProjects(leaderProjects);      // Fetch tasks for all projects
       let allProjectTasks: any[] = [];
       
       await Promise.all(
         leaderProjects.map(async (project: any) => {
           try {
-            const projectTasks = await taskAPI.search({ projectId: project.id });
+            const projectTasks = await taskAPI.search({ projectId: project.projectId });
             allProjectTasks = allProjectTasks.concat(projectTasks || []);
           } catch (error) {
-            console.error(`Failed to fetch tasks for project ${project.id}:`, error);
+            console.error(`Failed to fetch tasks for project ${project.projectId}:`, error);
           }
         })
       );
@@ -77,9 +73,8 @@ const LeaderDashboard = () => {
             uniqueMembers.add(member.userId);
           });
         }
-        
-        // Calculate project status based on tasks
-        const projectTasks = allProjectTasks.filter(task => task.projectId === project.id);
+          // Calculate project status based on tasks
+        const projectTasks = allProjectTasks.filter(task => task.projectId === project.projectId);
         if (projectTasks.length > 0) {
           const completedTasksCount = projectTasks.filter(task => task.status === 'completed').length;
           if (completedTasksCount === projectTasks.length) {
@@ -91,8 +86,7 @@ const LeaderDashboard = () => {
           activeProjects++; // Projects without tasks are considered active
         }
       });
-      
-      setStats({
+        setStats({
         totalProjects: leaderProjects.length,
         totalMembers: uniqueMembers.size,
         activeProjects,
@@ -124,7 +118,6 @@ const LeaderDashboard = () => {
   };
 
   const handleTaskCreated = () => {
-    setShowTaskForm(false);
     loadData();
   };
 
@@ -144,13 +137,6 @@ const LeaderDashboard = () => {
             >
               <FolderPlus className="w-4 h-4 mr-2" />
               New Project
-            </Button>
-            <Button 
-              onClick={() => setShowTaskForm(true)} 
-              className="bg-accent hover:bg-accent/80 text-white transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Task
             </Button>
           </div>
         </div>        {/* Enhanced Statistics Dashboard */}
@@ -355,15 +341,6 @@ const LeaderDashboard = () => {
                 <Calendar className="w-5 h-5 mr-2" />
                 Task Management
               </CardTitle>
-              <Button
-                onClick={() => setShowTaskForm(true)}
-                variant="outline"
-                size="sm"
-                className="border-accent text-accent hover:bg-accent hover:text-white"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Task
-              </Button>
             </div>
           </CardHeader>          <CardContent>
             <TaskList tasks={allTasks.filter(task => selectedProjectId === 'all' || task.projectId === selectedProjectId)} onUpdate={handleTaskCreated} user={user} />
@@ -373,9 +350,6 @@ const LeaderDashboard = () => {
         {/* Modal Forms */}
         {showProjectForm && (
           <ProjectForm onClose={() => setShowProjectForm(false)} onSuccess={handleProjectCreated} />
-        )}
-        {showTaskForm && (
-          <TaskForm onClose={() => setShowTaskForm(false)} onSuccess={handleTaskCreated} projects={myProjects} />
         )}
       </div>
     </div>

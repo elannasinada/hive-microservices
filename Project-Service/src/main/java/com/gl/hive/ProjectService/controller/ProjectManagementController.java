@@ -3,7 +3,7 @@ package com.gl.hive.ProjectService.controller;
 import com.gl.hive.ProjectService.model.dto.ProjectMembersDto;
 import com.gl.hive.ProjectService.model.request.ProjectRequest;
 import com.gl.hive.ProjectService.service.interfaces.ProjectManagementService;
-import com.gl.hive.shared.lib.exceptions.ResourceNotFoundException;
+import com.gl.hive.ProjectService.exceptions.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,6 +42,7 @@ public class ProjectManagementController {
      * @throws ResourceNotFoundException if the project was not found
      */
     @GetMapping("/list-members/{projectId}")
+    @PreAuthorize("hasAnyRole('PROJECT_LEADER', 'ADMIN')")
     public ResponseEntity<ProjectMembersDto> listProjectMembers(
             @PathVariable Long projectId
     ) throws ResourceNotFoundException {

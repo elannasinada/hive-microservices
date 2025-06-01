@@ -54,28 +54,26 @@ const TaskManagement = () => {
   }, [tasks, searchQuery, statusFilter, priorityFilter, projectFilter]);
 
   const loadData = async () => {
-    if (!user) return;
-    
-    setLoading(true);
     try {
-      // Load projects based on user role
-      let projectsData = [];
-      if (user.roles.includes('ADMIN')) {
-        projectsData = await projectAPI.search();
-      } else if (user.roles.includes('PROJECT_LEADER')) {
-        projectsData = await projectAPI.search();
-        projectsData = projectsData.filter((p: any) => p.leaderId === user.id);
-      } else {
-        // Team member - get active project
-        try {
-          const activeProject = await projectAPI.getActiveProjectForUser(user.id);
-          projectsData = activeProject ? [activeProject] : [];
-        } catch (error) {
-          projectsData = [];
+      const projects = await projectAPI.search();
+      const leaderProjects = projects.filter((p: any) => p.leaderId === user?.id);
+      setMyProjects(leaderProjects);
+  
+      // Add memberCount to each project
+      const updatedProjects = leaderProjects.map((project: any) => {
+        const projectMembers = new Set();
+        if (project.members && project.members.projectMembers) {
+          project.members.projectMembers.forEach((member: any) => {
+            projectMembers.add(member.userId);
+          });
         }
-      }
-      
-      setProjects(projectsData);
+        return {
+          ...project,
+          memberCount: projectMembers.size
+        };
+      });
+      setMyProjects(updatedProjects);
+  
 
       // Load tasks - using same approach as TeamDashboard
       let tasksData = [];

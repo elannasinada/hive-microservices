@@ -4,6 +4,7 @@ import com.gl.hive.ProjectService.model.dto.ProjectMembersDto;
 import com.gl.hive.shared.lib.model.dto.CommentDTO;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -14,6 +15,7 @@ import java.util.List;
 public class SearchResponse {
 
     private Long projectId;
+    private Long leaderId;
 
     private String projectName;
     private String leaderName;
@@ -23,4 +25,6 @@ public class SearchResponse {
     private List<CommentDTO> commentDTOs;
     private int progress;
 
+    private LocalDate startDate;
+    private LocalDate endDate;
 }

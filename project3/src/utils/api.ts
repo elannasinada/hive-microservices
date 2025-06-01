@@ -135,6 +135,10 @@ export const projectAPI = {
   getCompletedProjectsForUser: (userId: string) => apiRequest(`/api/v1/project/inter-communication/completed-projects/${userId}`),
   // New endpoint for PROJECT_LEADERs to get users associated with their projects
   getUsersAssociatedWithProject: (projectId: string) => apiRequest(`/api/v1/project/inter-communication/get-user-association-with-task-and-project/${projectId}`),
+  update: (projectId: string, projectData: any) => apiRequest(`/api/v1/project/update/${projectId}`, {
+    method: 'PUT',
+    body: JSON.stringify(projectData)
+  }),
 };
 
 // Task API
