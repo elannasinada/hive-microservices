@@ -19,7 +19,7 @@ const LeaderDashboard = () => {
   const [myProjects, setMyProjects] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [allTasks, setAllTasks] = useState<any[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
+  const [selectedProjectName, setSelectedProjectName] = useState<string>('all');
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [stats, setStats] = useState({
     totalProjects: 0,
@@ -43,8 +43,8 @@ const LeaderDashboard = () => {
 
   useEffect(() => {
     // Update task stats when project filter changes
-    updateTaskStats(allTasks, selectedProjectId);
-  }, [selectedProjectId, allTasks]);
+    updateTaskStats(allTasks, selectedProjectName);
+  }, [selectedProjectName, allTasks]);
 
   const loadData = async () => {
     try {
@@ -94,21 +94,20 @@ const LeaderDashboard = () => {
       });
       
       // Calculate task statistics (filtered by selected project)
-      updateTaskStats(allProjectTasks, selectedProjectId);
+      updateTaskStats(allProjectTasks, selectedProjectName);
       
     } catch (error) {
       console.error('Failed to load data:', error);
     }
   };
 
-  const updateTaskStats = (tasks: any[], projectId: string) => {
-    const filteredTasks = projectId === 'all' ? tasks : tasks.filter(task => task.projectId === projectId);
-    
+  const updateTaskStats = (tasks: any[], projectName: string) => {
+    const filteredTasks = projectName === 'all' ? tasks : tasks.filter(task => String(task.projectName) === String(projectName));
     setTaskStats({
       totalTasks: filteredTasks.length,
-      completedTasks: filteredTasks.filter(task => task.status === 'completed').length,
-      inProgressTasks: filteredTasks.filter(task => task.status === 'in_progress').length,
-      todoTasks: filteredTasks.filter(task => task.status === 'to_do').length
+      completedTasks: filteredTasks.filter(task => task.taskStatus === 'COMPLETED').length,
+      inProgressTasks: filteredTasks.filter(task => task.taskStatus === 'IN_PROGRESS').length,
+      todoTasks: filteredTasks.filter(task => task.taskStatus === 'TO_DO').length
     });
   };
 
@@ -142,7 +141,7 @@ const LeaderDashboard = () => {
     return true;
   });
 
-  console.log('Passing tasks to TaskList:', allTasks.filter(task => selectedProjectId === 'all' || task.projectId === selectedProjectId));
+  console.log('Passing tasks to TaskList:', allTasks.filter(task => selectedProjectName === 'all' || task.projectName === selectedProjectName));
 
   return (
     <div className="min-h-screen bg-background">
@@ -217,14 +216,14 @@ const LeaderDashboard = () => {
                   <BarChart3 className="w-5 h-5 mr-2" />
                   Task Statistics
                 </CardTitle>
-                <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                <Select value={selectedProjectName} onValueChange={setSelectedProjectName}>
                   <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Select project" />
+                    <SelectValue placeholder="All Projects" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Projects</SelectItem>
                     {myProjects.map((project) => (
-                      <SelectItem key={String(project.projectId)} value={String(project.projectId)}>
+                      <SelectItem key={project.projectName} value={project.projectName}>
                         {project.projectName}
                       </SelectItem>
                     ))}
@@ -380,7 +379,7 @@ const LeaderDashboard = () => {
               </CardTitle>
             </div>
           </CardHeader>          <CardContent>
-            <TaskList tasks={allTasks.filter(task => selectedProjectId === 'all' || task.projectId === selectedProjectId)} onUpdate={handleTaskCreated} user={user} />
+            <TaskList tasks={allTasks.filter(task => selectedProjectName === 'all' || task.projectName === selectedProjectName)} onUpdate={handleTaskCreated} user={user} />
           </CardContent>
         </Card>
 

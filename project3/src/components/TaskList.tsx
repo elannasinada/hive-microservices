@@ -327,6 +327,14 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
     fetchProjects();
   }, []);
 
+  // Task statistics based on filteredTasksByProject
+  const stats = {
+    total: filteredTasksByProject.length,
+    todo: filteredTasksByProject.filter(t => t.taskStatus === 'TO_DO').length,
+    inProgress: filteredTasksByProject.filter(t => t.taskStatus === 'IN_PROGRESS').length,
+    completed: filteredTasksByProject.filter(t => t.taskStatus === 'COMPLETED').length,
+  };
+
   return (
     <div className="space-y-6">
       {/* Project Selection Buttons */}
