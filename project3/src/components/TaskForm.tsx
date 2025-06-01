@@ -358,7 +358,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
               max={maxDueDate}
             />
           </div>          {/* User Assignment Section */}
-          {canAssignUsers && !taskToEdit && assignmentUsers && assignmentUsers.length > 0 && (
+          {canAssignUsers && assignmentUsers && assignmentUsers.length > 0 && (
             <div className="space-y-2">
               <Label>
                 Assign to Team Member
@@ -402,7 +402,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
               </div>
               <p className="text-xs text-secondary/60">
                 Select one team member to assign this task to. You can change assignment later if needed.
-              </p>            </div>
+              </p>
+            </div>
           )}
           
           {/* Show message when assignment is not available */}

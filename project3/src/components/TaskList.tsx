@@ -32,8 +32,8 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [originalAssignedUser, setOriginalAssignedUser] = useState<string>('');
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
-  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProjectName, setSelectedProjectName] = useState<string>('');
+  const [projects, setProjects] = useState<{ projectId: string, projectName: string }[]>([]);
   const [projectTimeFilter, setProjectTimeFilter] = useState<string>('all');
 
   // Only allow task management for ADMIN or PROJECT_LEADER
@@ -260,6 +260,9 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
     return { ...task, assignee };
   });
 
+  // Debug: Print the full task object before normalization
+  console.log('tasksWithAssignee:', tasksWithAssignee);
+
   // Helper to determine project time status
   function getProjectTimeStatus(project) {
     if (!project || !project.endDate) return 'active';
@@ -285,71 +288,68 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
   // Normalize projectId for all tasks before filtering
   const normalizedTasks = tasksWithAssignee.map(task => ({
     ...task,
-    projectId: String(task.projectId || (task.project && (task.project.projectId || task.project.id)) || ''),
+    projectId: String(task.taskId),
   }));
 
-  // Filter tasks by selected project and project time filter
-  const filteredTasksByProject = selectedProjectId === 'all'
-    ? normalizedTasks // Show all tasks if 'all' is selected
-    : normalizedTasks.filter(task => String(task.projectId) === String(selectedProjectId));
+  // Debug: Log selectedProjectId and projectIds in normalizedTasks
+  console.log('Selected projectId:', selectedProjectName);
+  console.log('All task projectIds:', normalizedTasks.map(t => t.projectId));
 
-  // Fetch only the authenticated project leader's projects for the dropdown
+  // Only show tasks when a project is selected
+  const filteredTasksByProject = !selectedProjectName
+    ? []
+    : normalizedTasks.filter(task => String(task.projectName) === String(selectedProjectName));
+  console.log('Filtered tasks for selected project:', filteredTasksByProject);
+
+  // Fetch all projects for the project selection buttons
   useEffect(() => {
+    // Fetch all projects for the project selection buttons
     async function fetchProjects() {
-      if (!user) return;
-      let projectsData = [];
-      if (user.roles.includes('ADMIN')) {
-        projectsData = await projectAPI.search();
-      } else if (user.roles.includes('PROJECT_LEADER')) {
-        const allProjects = await projectAPI.search();
-        projectsData = allProjects.filter((p: any) => p.leaderId === user.id);
-      } else {
-        // Team member - get active project
-        try {
-          const activeProject = await projectAPI.getActiveProjectForUser(user.id);
-          projectsData = activeProject ? [activeProject] : [];
-        } catch (error) {
-          projectsData = [];
-        }
+      try {
+        const projectsData = await projectAPI.search();
+        const today = new Date();
+        const filtered = projectsData.filter((p: any) => {
+          const start = p.startDate ? new Date(p.startDate) : null;
+          const end = p.endDate ? new Date(p.endDate) : null;
+          if (!start || !end) return false;
+          // Active: today >= start && today <= end
+          // Future: today < start
+          return (today >= start && today <= end) || (today < start);
+        }).map((p: any) => ({
+          projectId: String(p.projectId),
+          projectName: p.projectName || p.name || p.title || 'Unnamed Project',
+        }));
+        setProjects(filtered);
+      } catch (err) {
+        setProjects([]);
       }
-      setProjects(projectsData);
     }
     fetchProjects();
-  }, [user]);
+  }, []);
 
   return (
     <div className="space-y-6">
-      {/* Project Time Filter Dropdown */}
-      <div className="flex items-center mb-4 gap-4">
-        <label htmlFor="project-time-filter" className="mr-2 font-medium text-secondary/80">Project Time:</label>
-        <select
-          id="project-time-filter"
-          className="px-3 py-2 border border-accent/20 rounded-md text-sm bg-background"
-          value={projectTimeFilter}
-          onChange={e => setProjectTimeFilter(e.target.value)}
+      {/* Project Selection Buttons */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {projects.length === 0 ? (
+          <span className="text-secondary/60">No projects available.</span>
+        ) : (
+          projects.map((project) => (
+            <button
+              key={project.projectName}
+              onClick={() => setSelectedProjectName(project.projectName)}
+              className={`px-4 py-2 rounded border transition-colors duration-150 ${selectedProjectName === project.projectName ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-accent/30 hover:bg-accent/10'}`}
+            >
+              {project.projectName}
+            </button>
+          ))
+        )}
+        <button
+          onClick={() => setSelectedProjectName('')}
+          className={`px-4 py-2 rounded border transition-colors duration-150 ${!selectedProjectName ? 'bg-primary text-white border-primary' : 'bg-white text-primary border-accent/30 hover:bg-accent/10'}`}
         >
-          <option value="all">All Projects</option>
-          <option value="active">Active Projects</option>
-          <option value="future">Future Projects</option>
-          <option value="past">Past Projects</option>
-        </select>
-        {/* Project Filter Dropdown */}
-        <label htmlFor="project-filter" className="ml-4 mr-2 font-medium text-secondary/80">Project:</label>
-        <select
-          id="project-filter"
-          className="px-3 py-2 border border-accent/20 rounded-md text-sm bg-background"
-          value={selectedProjectId}
-          onChange={e => setSelectedProjectId(e.target.value)}
-        >
-          <option value="all">All Projects</option>
-          {projects
-            .filter(project => filteredProjectIds.includes(String(project.projectId || project.id)))
-            .map((project: any) => (
-              <option key={project.projectId || project.id} value={project.projectId || project.id}>
-                {project.projectName || project.name || project.title}
-              </option>
-            ))}
-        </select>
+          Show None
+        </button>
       </div>
       {/* Search and Actions */}
       <Card className="border-accent/20">
