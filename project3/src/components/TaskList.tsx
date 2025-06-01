@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Calendar, User, Edit, Trash, Search, Users, Eye } from 'lucide-react';
-import { taskAPI } from '@/utils/api';
+import { taskAPI, projectAPI } from '@/utils/api';
 import { toast } from '@/hooks/use-toast';
 import TaskForm from './TaskForm';
 import TaskDetails from './TaskDetails';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TaskListProps {
   tasks: any[];
@@ -16,6 +17,7 @@ interface TaskListProps {
 }
 
 const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
+  const { user: currentUser } = useAuth();
   const [taskStats, setTaskStats] = useState({
     totalTasks: 0,
     completedTasks: 0,
@@ -26,6 +28,12 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
   const [editingTask, setEditingTask] = useState(null);
   const [viewingTask, setViewingTask] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string>('');
+  const [originalAssignedUser, setOriginalAssignedUser] = useState<string>('');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
+  const [projects, setProjects] = useState<any[]>([]);
+  const [projectTimeFilter, setProjectTimeFilter] = useState<string>('all');
 
   // Only allow task management for ADMIN or PROJECT_LEADER
   const canManageTasks = user && (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'));
@@ -143,13 +151,207 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
     }
   };
 
+  useEffect(() => {
+    if (editingTask && canManageTasks) {
+      // Fetch all users for assignment
+      (async () => {
+        let users = [];
+        try {
+          users = await (await import('@/utils/api')).adminAPI.getAllUsers();
+        } catch {
+          users = await (await import('@/utils/api')).authAPI.getAllUsers();
+        }
+        const formattedUsers = users
+          .map((user: any) => ({
+            userId: user.userId || user.user_id || user.id,
+            username: user.actualUsername || user.username || 'Unknown User',
+            email: user.email || 'No Email',
+            roles: user.roles || []
+          }))
+          .filter((user: any) => {
+            const userRoles = Array.isArray(user.roles)
+              ? user.roles.map((r: any) => typeof r === 'string' ? r : r.role)
+              : [];
+            const isAdmin = userRoles.some((role: string) => role === 'ROLE_ADMIN' || role === 'ADMIN');
+            const isProjectLeader = userRoles.some((role: string) => role === 'ROLE_PROJECT_LEADER' || role === 'PROJECT_LEADER');
+            return !isAdmin && !isProjectLeader;
+          });
+        setAvailableUsers(formattedUsers);
+      })();
+      // Fetch current assigned user
+      (async () => {
+        const taskDetails = await taskAPI.get(editingTask.id || editingTask.taskId);
+        let assignedUserId = '';
+        if (taskDetails && taskDetails.assignedUsers) {
+          if (Array.isArray(taskDetails.assignedUsers)) {
+            assignedUserId = String(taskDetails.assignedUsers[0]?.userId || '');
+          } else if (typeof taskDetails.assignedUsers === 'object') {
+            assignedUserId = Object.keys(taskDetails.assignedUsers)[0] || '';
+          }
+        }
+        setSelectedUser(assignedUserId);
+        setOriginalAssignedUser(assignedUserId);
+      })();
+    }
+  }, [editingTask, canManageTasks]);
+
+  const handleEditTaskSubmit = async (formData: any) => {
+    try {
+      // Update task details
+      await taskAPI.update(editingTask.id, formData);
+      // Assignment logic
+      if (canManageTasks && selectedUser && selectedUser !== originalAssignedUser) {
+        // Unassign previous user if any
+        if (originalAssignedUser) {
+          await taskAPI.unassign({
+            taskId: editingTask.id,
+            projectId: editingTask.projectId,
+            userIdList: [Number(originalAssignedUser)]
+          });
+        }
+        // Assign new user
+        await taskAPI.assignToUsers({
+          taskId: Number(editingTask.id),
+          projectId: Number(editingTask.projectId),
+          userIdList: [Number(selectedUser)]
+        });
+      }
+      toast({ title: 'Success!', description: 'Task updated successfully.' });
+      setEditingTask(null);
+      onUpdate();
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update task', variant: 'destructive' });
+    }
+  };
+
   const filteredTasks = tasks.filter(task =>
     task.taskName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     task.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Add a helper to resolve the assignee name/email from assignedUsers
+  const resolveAssignee = (task) => {
+    if (!task.assignedUsers) return '';
+    // If assignedUsers is a map/object with userId: username
+    if (
+      typeof task.assignedUsers === 'object' &&
+      !Array.isArray(task.assignedUsers)
+    ) {
+      const userIds = Object.keys(task.assignedUsers);
+      if (userIds.length > 0) {
+        // Use the value (username) instead of the key (userId)
+        return task.assignedUsers[userIds[0]] || userIds[0] || '';
+      }
+    }
+    // Fallbacks for other formats
+    if (Array.isArray(task.assignedUsers) && task.assignedUsers.length > 0) {
+      const user = task.assignedUsers[0];
+      if (typeof user === 'object') {
+        return user.username || user.email || user.userId || '';
+      }
+      return user;
+    }
+    return '';
+  };
+
+  const tasksWithAssignee = filteredTasks.map(task => {
+    let assignee = resolveAssignee(task);
+    return { ...task, assignee };
+  });
+
+  // Helper to determine project time status
+  function getProjectTimeStatus(project) {
+    if (!project || !project.endDate) return 'active';
+    const now = new Date();
+    const end = new Date(project.endDate);
+    if (end < now) return 'past';
+    if (end.toDateString() === now.toDateString()) return 'active';
+    return end > now ? 'future' : 'active';
+  }
+
+  // Filter projects by time filter
+  const filteredProjectIds = projects
+    .filter(project => {
+      if (projectTimeFilter === 'all') return true;
+      const status = getProjectTimeStatus(project);
+      if (projectTimeFilter === 'active') return status === 'active';
+      if (projectTimeFilter === 'past') return status === 'past';
+      if (projectTimeFilter === 'future') return status === 'future';
+      return true;
+    })
+    .map(project => String(project.projectId || project.id));
+
+  // Normalize projectId for all tasks before filtering
+  const normalizedTasks = tasksWithAssignee.map(task => ({
+    ...task,
+    projectId: String(task.projectId || (task.project && (task.project.projectId || task.project.id)) || ''),
+  }));
+
+  // Filter tasks by selected project and project time filter
+  const filteredTasksByProject = selectedProjectId === 'all'
+    ? normalizedTasks.filter(task => filteredProjectIds.includes(String(task.projectId)))
+    : normalizedTasks.filter(task => {
+        return String(task.projectId) === String(selectedProjectId) && filteredProjectIds.includes(String(task.projectId));
+      });
+
+  // Fetch only the authenticated project leader's projects for the dropdown
+  useEffect(() => {
+    async function fetchProjects() {
+      if (!user) return;
+      let projectsData = [];
+      if (user.roles.includes('ADMIN')) {
+        projectsData = await projectAPI.search();
+      } else if (user.roles.includes('PROJECT_LEADER')) {
+        const allProjects = await projectAPI.search();
+        projectsData = allProjects.filter((p: any) => p.leaderId === user.id);
+      } else {
+        // Team member - get active project
+        try {
+          const activeProject = await projectAPI.getActiveProjectForUser(user.id);
+          projectsData = activeProject ? [activeProject] : [];
+        } catch (error) {
+          projectsData = [];
+        }
+      }
+      setProjects(projectsData);
+    }
+    fetchProjects();
+  }, [user]);
+
   return (
     <div className="space-y-6">
+      {/* Project Time Filter Dropdown */}
+      <div className="flex items-center mb-4 gap-4">
+        <label htmlFor="project-time-filter" className="mr-2 font-medium text-secondary/80">Project Time:</label>
+        <select
+          id="project-time-filter"
+          className="px-3 py-2 border border-accent/20 rounded-md text-sm bg-background"
+          value={projectTimeFilter}
+          onChange={e => setProjectTimeFilter(e.target.value)}
+        >
+          <option value="all">All Projects</option>
+          <option value="active">Active Projects</option>
+          <option value="future">Future Projects</option>
+          <option value="past">Past Projects</option>
+        </select>
+        {/* Project Filter Dropdown */}
+        <label htmlFor="project-filter" className="ml-4 mr-2 font-medium text-secondary/80">Project:</label>
+        <select
+          id="project-filter"
+          className="px-3 py-2 border border-accent/20 rounded-md text-sm bg-background"
+          value={selectedProjectId}
+          onChange={e => setSelectedProjectId(e.target.value)}
+        >
+          <option value="all">All Projects</option>
+          {projects
+            .filter(project => filteredProjectIds.includes(String(project.projectId || project.id)))
+            .map((project: any) => (
+              <option key={project.projectId || project.id} value={project.projectId || project.id}>
+                {project.projectName || project.name || project.title}
+              </option>
+            ))}
+        </select>
+      </div>
       {/* Search and Actions */}
       <Card className="border-accent/20">
         <CardHeader>
@@ -190,9 +392,10 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
         </CardContent>
       </Card>
 
-      {/* Tasks Grid */}
+      {/* Active Tasks Grid */}
+      <h2 className="text-lg font-bold text-primary mb-2">Tasks</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTasks.map((task: any) => (
+        {filteredTasksByProject.map((task: any) => (
           <Card 
             key={task.id} 
             className="border-accent/20 hover:shadow-lg transition-all duration-200 cursor-pointer group"
@@ -259,13 +462,11 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
                     Due: {new Date(task.dueDate).toLocaleDateString()}
                   </div>
                 )}
-                
-                {task.assignee && (
-                  <div className="flex items-center text-secondary/60">
-                    <User className="w-4 h-4 mr-2" />
-                    {task.assignee}
-                  </div>
-                )}
+                <div className="flex items-center text-secondary/60">
+                  <User className="w-4 h-4 mr-2" />
+                  <span className="font-semibold">Assigned to:</span>&nbsp;
+                  {task.assignee ? task.assignee : <span className="italic text-secondary/50">Unassigned</span>}
+                </div>
               </div>
               
               {/*<div className="mt-4 pt-4 border-t border-accent/20 space-y-2" onClick={(e) => e.stopPropagation()}>*/}
@@ -306,16 +507,16 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
         ))}
       </div>
 
-      {filteredTasks.length === 0 && (
+      {filteredTasksByProject.length === 0 && (
         <div className="text-center py-12">
           <div className="w-24 h-24 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <Search className="w-12 h-12 text-accent" />
           </div>
           <h3 className="text-lg font-medium text-primary mb-2">
-            {searchTerm ? 'No tasks found' : 'No tasks yet'}
+            No tasks found
           </h3>
           <p className="text-secondary/70">
-            {searchTerm ? 'Try adjusting your search criteria' : 'Create your first task to get started'}
+            No tasks for the selected project/time filter.
           </p>
         </div>
       )}
@@ -327,8 +528,12 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
             setEditingTask(null);
             onUpdate();
           }}
-          projects={[]}
+          projects={projects}
           taskToEdit={editingTask}
+          availableUsers={availableUsers}
+          selectedUser={selectedUser}
+          setSelectedUser={setSelectedUser}
+          handleEditTaskSubmit={handleEditTaskSubmit}
         />
       )}
 

@@ -27,4 +27,5 @@ public class SearchResponse {
 
     private LocalDate startDate;
     private LocalDate endDate;
+    private boolean active;
 }

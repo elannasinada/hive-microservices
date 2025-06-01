@@ -83,6 +83,7 @@ public class SearchProjectServiceImpl implements SearchProjectService {
                         .progress(project.getProgress())
                         .startDate(project.getStartDate())
                         .endDate(project.getEndDate())
+                        .active(project.isActive())
                         .build();
             } catch (Exception e) {
                 log.error("😖 uh oh... there seems to be an error: {{}} 😖", e.getMessage());
@@ -131,6 +132,7 @@ public class SearchProjectServiceImpl implements SearchProjectService {
                                     .progress(project.getProgress())
                                     .startDate(project.getStartDate())
                                     .endDate(project.getEndDate())                                
+                                    .active(project.isActive())
                                     .build();
                         }
                 ).toList();

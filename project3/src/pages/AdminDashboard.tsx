@@ -16,6 +16,17 @@ import AdminStats from '@/components/AdminStats';
 import AddUserForm from '@/components/AddUserForm';
 import EditUserModal from '@/components/EditUserModal';
 
+// Helper to determine project status
+function getProjectStatus(project) {
+  if (!project || !project.startDate || !project.endDate) return 'unknown';
+  const today = new Date();
+  const start = new Date(project.startDate);
+  const end = new Date(project.endDate);
+  if (today < start) return 'future';
+  if (today > end) return 'past';
+  return 'active';
+}
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
@@ -160,6 +171,9 @@ const AdminDashboard = () => {
     fetchData(); // Refresh the list
   };
 
+  const activeProjects = projects.filter(p => getProjectStatus(p) === 'active').length;
+  const completedProjects = projects.filter(p => getProjectStatus(p) === 'past').length;
+
   return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -194,7 +208,7 @@ const AdminDashboard = () => {
           {/*        </div>*/}
           {/*        <div className="ml-4">*/}
           {/*          <p className="text-sm font-medium text-secondary/70">Active Projects</p>*/}
-          {/*          <p className="text-2xl font-bold text-primary">{projects.length}</p>*/}
+          {/*          <p className="text-2xl font-bold text-primary">{activeProjects}</p>*/}
           {/*        </div>*/}
           {/*      </div>*/}
           {/*    </CardContent>*/}

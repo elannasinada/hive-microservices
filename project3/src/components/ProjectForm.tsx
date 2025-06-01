@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {projectAPI, taskAPI, authAPI, adminAPI, projectLeaderAPI, apiRequest} from '@/utils/api';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, X, Calendar, User, Flag } from 'lucide-react';
+import { Plus, X, Calendar, User, Flag, Edit, Trash } from 'lucide-react';
 
 interface ProjectFormProps {
   onClose: () => void;
@@ -24,7 +24,7 @@ interface TaskData {
   id: string;
   title: string;
   description: string;
-  priority: 'LOW' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high';
   status: 'to_do' | 'in_progress' | 'completed';
   dueDate: string;
   assignedUsers: string[];
@@ -150,39 +150,95 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
       };
 
       // Create the project first
-      const createdProject = await projectAPI.create(payload);
-      const projectId = createdProject.id || createdProject.projectId;
+      console.log('Creating project with payload:', payload);
+      let createdProject;
+      try {
+        createdProject = await projectAPI.create(payload);
+      } catch (error: any) {
+        const errorMessage = error?.data?.errorMessage || error?.message || '';
+        if (errorMessage.includes('User already has an active project assignment.')) {
+          toast({
+            title: 'Error',
+            description: 'You already have an active project assignment. Please complete or leave your current project before creating a new one.',
+            variant: 'destructive'
+          });
+          setLoading(false);
+          return;
+        } else {
+          toast({
+            title: 'Error',
+            description: errorMessage || 'Failed to create project',
+            variant: 'destructive'
+          });
+          setLoading(false);
+          return;
+        }
+      }
+      console.log('Created project response:', createdProject);
+      const projectId = createdProject?.id || createdProject?.projectId;
+
+      // Validate projectId obtained from created project
+      if (!projectId) {
+        console.error('Failed to obtain projectId from created project response:', createdProject);
+        toast({
+          title: "Error",
+          description: "Project created, but failed to get project ID for tasks. Please add tasks manually.",
+          variant: "destructive"
+        });
+        setLoading(false);
+        onSuccess(); // Indicate project creation was successful
+        return;
+      }
+
+      const projectIdStr = String(projectId);
 
       // Create tasks if any
       if (tasks.length > 0) {
         for (const task of tasks) {
-          try {            const taskPayload = {
+          try {
+            // Defensive: ensure required fields
+            if (!task.title || !task.priority || !task.status) {
+              console.error('Task missing required fields:', task);
+              continue;
+            }
+            const taskPayload = {
               taskName: task.title,
-              description: task.description,
-              taskPriority: task.priority.toUpperCase(), // LOW, MEDIUM, HIGH
-              taskStatus: task.status === 'to_do' ? 'TO_DO' : 
-                         task.status === 'in_progress' ? 'IN_PROGRESS' : 
-                         task.status === 'completed' ? 'COMPLETED' : 
-                         (task.status as string).toUpperCase(),
-              dueDate: task.dueDate || null
+              description: task.description || '',
+              taskPriority: (task.priority as string || 'MEDIUM').toUpperCase(), // LOW, MEDIUM, HIGH
+              taskStatus: task.status === 'to_do' ? 'TO_DO' :
+                          task.status === 'in_progress' ? 'IN_PROGRESS' :
+                          task.status === 'completed' ? 'COMPLETED' :
+                          ((task.status as string) || 'TO_DO').toUpperCase(),
+              dueDate: task.dueDate ? new Date(task.dueDate).toISOString() : null
             };
-
-            const createdTask = await taskAPI.create(projectId, taskPayload);
-              // Assign task to selected user if one is selected
+            console.log('Creating task with payload for projectId:', projectIdStr, taskPayload);
+            const createdTask = await taskAPI.create(projectIdStr, taskPayload);
+            console.log('Created task response:', createdTask);
+            // Assignment logic
             if (task.assignedUsers.length > 0 && task.assignedUsers[0] && canAssignUsers) {
               try {
+                // Ensure user is a member of the project before assigning the task
+                await projectAPI.addMember(projectId, task.assignedUsers[0]);
                 await taskAPI.assignToUsers({
-                  taskId: createdTask.id || createdTask.taskId,
-                  userIds: task.assignedUsers
+                  taskId: Number(createdTask.id || createdTask.taskId),
+                  projectId: Number(projectId),
+                  userIdList: task.assignedUsers.map(id => Number(id))
                 });
               } catch (assignError) {
-                console.error(`Failed to assign task ${task.title}:`, assignError);
-                // Continue with other tasks even if assignment fails
+                console.error(`Failed to add member or assign task ${task.title}:`, assignError);
+                toast({
+                  title: 'Error',
+                  description: `Failed to add user to project or assign task: ${assignError.message || assignError}`,
+                  variant: 'destructive'
+                });
               }
             }
           } catch (taskError) {
-            console.error(`Failed to create task ${task.title}:`, taskError);
-            // Continue with other tasks even if one fails
+            if (taskError && taskError.response && taskError.response.data) {
+              console.error(`Failed to create task ${task.title}:`, taskError.response.data);
+            } else {
+              console.error(`Failed to create task ${task.title}:`, taskError);
+            }
           }
         }
       }
@@ -227,7 +283,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
   const handleUserAssignment = (userId: string) => {
     setCurrentTask(prev => ({
       ...prev,
-      assignedUsers: [userId] // Only one user can be assigned
+      assignedUsers: [String(userId)] // Always store as string
     }));
   };
 
@@ -318,6 +374,9 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  const minDueDate = formData.startDate || undefined;
+  const maxDueDate = formData.endDate || undefined;
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -440,6 +499,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
                         value={currentTask.dueDate}
                         onChange={handleTaskChange}
                         className="border-accent/30 focus:border-primary"
+                        min={minDueDate}
+                        max={maxDueDate}
                       />
                     </div>
                   </div>
@@ -597,66 +658,37 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose, onSuccess }) => {
                         <Card key={task.id} className="border-accent/10 bg-gray-50/50">
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between">
-                              <div className="flex-1">
+                              <div>
+                                <h3 className="font-semibold text-primary mb-1">{task.title}</h3>
                                 <div className="flex items-center space-x-2 mb-2">
-                                  <h4 className="font-medium text-primary">{task.title}</h4>
-                                  <Badge className={getPriorityColor(task.priority)}>
-                                    <Flag className="w-3 h-3 mr-1" />
+                                  <Badge className={`text-xs px-2 py-0 ${getPriorityColor(task.priority)}`}>
                                     {task.priority}
                                   </Badge>
-                                  <Badge className={getStatusColor(task.status)}>
+                                  <Badge className={`text-xs px-2 py-0 ${getStatusColor(task.status)}`}>
                                     {task.status.replace('_', ' ')}
                                   </Badge>
                                 </div>
-                                {task.description && (
-                                  <p className="text-sm text-secondary/70 mb-2">{task.description}</p>
-                                )}                                {task.assignedUsers.length > 0 && (
-                                  <div className="mt-2 flex flex-wrap gap-1">
-                                    <span className="text-xs text-secondary/60">Assigned to:</span>
-                                    {task.assignedUsers.map((userId) => {
-                                      const assignedUser = availableUsers.find(u => (u.userId || u.id) === userId);
-                                      return assignedUser ? (
-                                        <Badge key={userId} variant="outline" className="text-xs px-1 py-0">
-                                          {assignedUser.username}
-                                        </Badge>
-                                      ) : null;
-                                    })}
-                                  </div>
-                                )}
+                                <p className="text-secondary/70 text-sm mb-2">{task.description}</p>
                                 <div className="flex items-center space-x-4 text-xs text-secondary/60">
-                                  {task.dueDate && (
-                                    <span className="flex items-center">
-                                      <Calendar className="w-3 h-3 mr-1" />
-                                      Due: {new Date(task.dueDate).toLocaleDateString()}
-                                    </span>
-                                  )}
-                                  {task.assignedUsers.length > 0 && (
-                                    <span className="flex items-center">
-                                      <User className="w-3 h-3 mr-1" />
-                                      Assigned
-                                    </span>
-                                  )}
+                                  <span className="flex items-center">
+                                    <Calendar className="w-3 h-3 mr-1" />
+                                    Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}
+                                  </span>
+                                  <span className="flex items-center">
+                                    <User className="w-3 h-3 mr-1" />
+                                    Assigned to: {task.assignedUsers.length > 0 ? (() => {
+                                      const assignedUser = availableUsers.find(u => String(u.userId || u.id) === String(task.assignedUsers[0]));
+                                      return assignedUser ? (assignedUser.username || assignedUser.email) : 'Unassigned';
+                                    })() : 'Unassigned'}
+                                  </span>
                                 </div>
                               </div>
-                              <div className="flex space-x-1 ml-4">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => editTask(task)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <span className="sr-only">Edit</span>
-                                  ✏️
+                              <div className="flex items-center space-x-2">
+                                <Button size="icon" variant="ghost" onClick={() => editTask(task)}>
+                                  <Edit className="w-4 h-4" />
                                 </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeTask(task.id)}
-                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-800"
-                                >
-                                  <X className="w-4 h-4" />
+                                <Button size="icon" variant="ghost" onClick={() => removeTask(task.id)}>
+                                  <Trash className="w-4 h-4" />
                                 </Button>
                               </div>
                             </div>

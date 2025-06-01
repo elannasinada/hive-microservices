@@ -53,6 +53,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
     todoTasks: 0
   });
 
+  const [forceUpdate, setForceUpdate] = useState(0); // Dummy state to force re-render
+
   // Move helper functions inside the component so they are in scope
   function formatDate(date: any) {
     if (!date) return 'No date available';
@@ -107,32 +109,42 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
 
   // Fetch tasks for all displayed projects
   useEffect(() => {
+    let isMounted = true;
     const fetchTasksForProjects = async () => {
       const tasksByProject: { [projectId: string]: any[] } = {};
       await Promise.all(
         displayProjects.map(async (project: any) => {
-          const projectId = project.id || project.projectId;
+          const projectId = String(project.projectId);
           try {
-            const tasks = await (window as any).taskAPI
-              ? (window as any).taskAPI.search({ projectId })
-              : (await import('@/utils/api')).taskAPI.search({ projectId });
-            const uniqueTasks = Array.isArray(tasks)
-              ? Object.values(
-                  tasks.reduce((acc, t) => {
-                    acc[t.taskId] = t;
-                    return acc;
-                  }, {})
-                )
+            let tasksResult;
+            if ((window as any).taskAPI) {
+              tasksResult = await (window as any).taskAPI.search({ projectId });
+            } else {
+              const api = await import('@/utils/api');
+              tasksResult = await api.taskAPI.search({ projectId });
+            }
+            // Defensive: If the result is a Promise, await it
+            if (tasksResult && typeof tasksResult.then === 'function') {
+              tasksResult = await tasksResult;
+            }
+            console.log('Fetched tasks for', projectId, 'got', tasksResult);
+            const normalizedTasks = Array.isArray(tasksResult)
+              ? tasksResult.map((t: any) => ({
+                  ...t,
+                  projectId,
+                  status: t.status || t.taskStatus,
+                }))
               : [];
-            tasksByProject[projectId] = uniqueTasks;
-          } catch {
+            tasksByProject[projectId] = normalizedTasks;
+          } catch (err) {
             tasksByProject[projectId] = [];
           }
         })
       );
-      setProjectTasks(tasksByProject);
+      if (isMounted) setProjectTasks(tasksByProject);
     };
     if (displayProjects.length > 0) fetchTasksForProjects();
+    return () => { isMounted = false; };
   }, [displayProjects]);
 
   // Fetch members for a project and cache them
@@ -255,6 +267,17 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
     onUpdate();
   };
 
+  // Helper to determine project status
+  function getProjectStatus(project) {
+    if (!project || !project.startDate || !project.endDate) return 'unknown';
+    const today = new Date();
+    const start = new Date(project.startDate);
+    const end = new Date(project.endDate);
+    if (today < start) return 'future';
+    if (today > end) return 'past';
+    return 'active';
+  }
+
   return (
     <div className="space-y-6">
       {/* Search Section */}
@@ -288,22 +311,48 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
       {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {displayProjects.map((project: any) => {
-          const projectId = project.id || project.projectId;
+          const projectId = String(project.projectId);
           const rawTasks = projectTasks[projectId];
-          const uniqueTasks = Array.isArray(rawTasks)
+          if (rawTasks === undefined) {
+            // Tasks are still loading for this project
+            return (
+              <Card key={String(project.projectId)} className="border-accent/20 hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-primary text-lg">{project.projectName}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-secondary/70 text-sm mb-4">Loading tasks...</div>
+                </CardContent>
+              </Card>
+            );
+          }
+          const uniqueTasks: any[] = Array.isArray(rawTasks)
             ? Object.values(
                 rawTasks.reduce((acc, t) => {
-                  acc[t.taskId] = t;
+                  const normalizedTask = {
+                    ...t,
+                    projectId, // Always assign the outer projectId as a string
+                    status: t.status || t.taskStatus,
+                  };
+                  acc[normalizedTask.taskId] = normalizedTask;
                   return acc;
                 }, {})
               )
             : [];
-          const totalTasks = uniqueTasks.length;
-          const completedTasks = uniqueTasks.filter((t: any) => t.status === 'completed').length;
+          // Debug log
+          console.log('Project', projectId, 'rawTasks:', rawTasks, 'uniqueTasks:', uniqueTasks);
+          const totalTasks = uniqueTasks.length > 0 ? uniqueTasks.length : (Array.isArray(rawTasks) ? rawTasks.length : 0);
+          const completedTasks = uniqueTasks.filter((t) => t.taskStatus === 'COMPLETED').length;
+          const todoTasks = uniqueTasks.filter((t) => t.taskStatus === 'TO_DO').length;
+          const inProgressTasks = uniqueTasks.filter((t) => t.taskStatus === 'IN_PROGRESS').length;
           const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
           let progressColor = 'bg-red-500';
           if (progress > 70) progressColor = 'bg-green-500';
           else if (progress > 30) progressColor = 'bg-yellow-500';
+          // Use helper for status
+          const projectStatus = getProjectStatus(project);
 
           // Any PROJECT_LEADER can manage members, not just those who are members of the project
           const canManageMembers = user && (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'));
@@ -319,14 +368,26 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
             : (project.memberCount || 0);
 
           return (
-            <Card key={projectId} className="border-accent/20 hover:shadow-lg transition-shadow">
+            <Card key={String(project.projectId)} className="border-accent/20 hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-primary text-lg">{project.projectName}</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="border-accent text-secondary">
-                      Active
-                    </Badge>
+                    {projectStatus === 'active' && (
+                      <Badge variant="outline" className="border-accent text-secondary">
+                        Active
+                      </Badge>
+                    )}
+                    {projectStatus === 'future' && (
+                      <Badge variant="outline" className="border-accent text-blue-400">
+                        Future
+                      </Badge>
+                    )}
+                    {projectStatus === 'past' && (
+                      <Badge variant="outline" className="border-accent text-gray-400">
+                        Past
+                      </Badge>
+                    )}
                     <button
                       className="p-1 rounded hover:bg-accent/10"
                       title="Edit Project"
@@ -357,21 +418,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                 {/* Project Statistics */}
                 <div className="grid grid-cols-3 gap-3 mb-4 p-3 bg-gray-50/50 rounded-lg">
                   <div className="text-center">
-                    <div className="text-lg font-bold text-blue-600">
-                      {uniqueTasks.filter((t: any) => t.status === 'to_do').length}
-                    </div>
+                    <div className="text-lg font-bold text-blue-600">{todoTasks}</div>
                     <div className="text-xs text-secondary/60">To Do</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-lg font-bold text-orange-600">
-                      {uniqueTasks.filter((t: any) => t.status === 'in_progress').length}
-                    </div>
+                    <div className="text-lg font-bold text-orange-600">{inProgressTasks}</div>
                     <div className="text-xs text-secondary/60">In Progress</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-lg font-bold text-green-600">
-                      {completedTasks}
-                    </div>
+                    <div className="text-lg font-bold text-green-600">{completedTasks}</div>
                     <div className="text-xs text-secondary/60">Completed</div>
                   </div>
                 </div>
@@ -387,7 +442,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                   {memberCount} members
                   <span className="mx-2">•</span>
                   <ClipboardList className="w-4 h-4 mr-1"/>
-                  {taskStats.totalTasks} task{totalTasks !== 1 ? 's' : ''} total
+                  {totalTasks} task{totalTasks !== 1 ? 's' : ''} total
                 </div>
                 <div className="space-y-2">
                   {canManageMembers && (

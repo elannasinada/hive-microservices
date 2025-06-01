@@ -32,6 +32,8 @@ const LeaderDashboard = () => {
     inProgressTasks: 0,
     todoTasks: 0
   });
+  const [projectTimeFilter, setProjectTimeFilter] = useState<string>('all');
+
   useEffect(() => {
     if (user) {
       loadData();
@@ -41,12 +43,15 @@ const LeaderDashboard = () => {
   useEffect(() => {
     // Update task stats when project filter changes
     updateTaskStats(allTasks, selectedProjectId);
-  }, [selectedProjectId, allTasks]);  const loadData = async () => {
+  }, [selectedProjectId, allTasks]);
+
+  const loadData = async () => {
     try {
       const projects = await projectAPI.search();
       // Backend already filters projects for PROJECT_LEADERs, but double-check for safety
       const leaderProjects = projects.filter((p: any) => p.leaderId === user?.id);
-      setMyProjects(leaderProjects);      // Fetch tasks for all projects
+      setMyProjects(leaderProjects);
+      // Fetch tasks for all projects
       let allProjectTasks: any[] = [];
       
       await Promise.all(
@@ -62,7 +67,7 @@ const LeaderDashboard = () => {
       
       setAllTasks(allProjectTasks);
       
-      // Calculate comprehensive statistics
+      // Calculate comprehensive statistics using getProjectStatus
       const uniqueMembers = new Set();
       let activeProjects = 0;
       let completedProjects = 0;
@@ -73,18 +78,10 @@ const LeaderDashboard = () => {
             uniqueMembers.add(member.userId);
           });
         }
-          // Calculate project status based on tasks
-        const projectTasks = allProjectTasks.filter(task => task.projectId === project.projectId);
-        if (projectTasks.length > 0) {
-          const completedTasksCount = projectTasks.filter(task => task.status === 'completed').length;
-          if (completedTasksCount === projectTasks.length) {
-            completedProjects++;
-          } else {
-            activeProjects++;
-          }
-        } else {
-          activeProjects++; // Projects without tasks are considered active
-        }
+        // Use getProjectStatus for status
+        const status = getProjectStatus(project);
+        if (status === 'active') activeProjects++;
+        if (status === 'past') completedProjects++;
       });
         setStats({
         totalProjects: leaderProjects.length,
@@ -120,6 +117,27 @@ const LeaderDashboard = () => {
   const handleTaskCreated = () => {
     loadData();
   };
+
+  // Helper to determine project status
+  function getProjectStatus(project) {
+    if (!project || !project.startDate || !project.endDate) return 'unknown';
+    const today = new Date();
+    const start = new Date(project.startDate);
+    const end = new Date(project.endDate);
+    if (today < start) return 'future';
+    if (today > end) return 'past';
+    return 'active';
+  }
+
+  // Filter projects by time filter
+  const filteredMyProjects = myProjects.filter(project => {
+    if (projectTimeFilter === 'all') return true;
+    const status = getProjectStatus(project);
+    if (projectTimeFilter === 'active') return status === 'active';
+    if (projectTimeFilter === 'past') return status === 'past';
+    if (projectTimeFilter === 'future') return status === 'future';
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -201,7 +219,7 @@ const LeaderDashboard = () => {
                   <SelectContent>
                     <SelectItem value="all">All Projects</SelectItem>
                     {myProjects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
+                      <SelectItem key={String(project.projectId)} value={String(project.projectId)}>
                         {project.projectName}
                       </SelectItem>
                     ))}
@@ -317,19 +335,33 @@ const LeaderDashboard = () => {
                 <Target className="w-5 h-5 mr-2" />
                 My Projects - Individual Progress Tracking
               </CardTitle>
-              <Button
-                onClick={() => setShowProjectForm(true)}
-                variant="outline"
-                size="sm"
-                className="border-primary text-primary hover:bg-primary hover:text-white"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Project
-              </Button>
+              <div className="flex items-center gap-4">
+                <label htmlFor="project-time-filter" className="mr-2 font-medium text-secondary/80">Project Time:</label>
+                <select
+                  id="project-time-filter"
+                  className="px-3 py-2 border border-accent/20 rounded-md text-sm bg-background"
+                  value={projectTimeFilter}
+                  onChange={e => setProjectTimeFilter(e.target.value)}
+                >
+                  <option value="all">All Projects</option>
+                  <option value="active">Active Projects</option>
+                  <option value="future">Future Projects</option>
+                  <option value="past">Past Projects</option>
+                </select>
+                <Button
+                  onClick={() => setShowProjectForm(true)}
+                  variant="outline"
+                  size="sm"
+                  className="border-primary text-primary hover:bg-primary hover:text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Project
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <ProjectList projects={myProjects} onUpdate={handleProjectCreated} />
+            <ProjectList projects={filteredMyProjects} onUpdate={handleProjectCreated} />
           </CardContent>
         </Card>
 

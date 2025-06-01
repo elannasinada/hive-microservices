@@ -225,6 +225,7 @@ class ProjectManagementServiceImpl implements ProjectManagementService {
 
     private ProjectRequest createProjectRequestFromProject(Project project) {
         return ProjectRequest.builder()
+                .projectId(project.getProjectId())
                 .projectName(project.getProjectName())
                 .projectDescription(project.getDescription())
                 .createdAt(project.getCreatedAt())

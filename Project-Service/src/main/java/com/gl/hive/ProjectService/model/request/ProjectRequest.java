@@ -14,6 +14,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 public class ProjectRequest {
 
+    private Long projectId;
     private String projectName;
     private String projectDescription;
     private LocalDate createdAt;

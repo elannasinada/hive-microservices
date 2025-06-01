@@ -53,50 +53,63 @@ const TaskManagement = () => {
     applyFilters();
   }, [tasks, searchQuery, statusFilter, priorityFilter, projectFilter]);
 
+  // Helper to determine project status
+  function getProjectStatus(project) {
+    if (!project || !project.startDate || !project.endDate) return 'unknown';
+    const today = new Date();
+    const start = new Date(project.startDate);
+    const end = new Date(project.endDate);
+    if (today < start) return 'future';
+    if (today > end) return 'past';
+    return 'active';
+  }
+
   const loadData = async () => {
     try {
       const projects = await projectAPI.search();
-      const leaderProjects = projects.filter((p: any) => p.leaderId === user?.id);
-      setMyProjects(leaderProjects);
-  
+      const leaderProjects = projects.filter((p) =>
+        user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER')
+          ? true
+          : p.leaderId === user?.id
+      );
+      setProjects(leaderProjects);
       // Add memberCount to each project
-      const updatedProjects = leaderProjects.map((project: any) => {
+      const updatedProjects = leaderProjects.map((project) => {
         const projectMembers = new Set();
         if (project.members && project.members.projectMembers) {
-          project.members.projectMembers.forEach((member: any) => {
+          project.members.projectMembers.forEach((member) => {
             projectMembers.add(member.userId);
           });
         }
         return {
           ...project,
-          memberCount: projectMembers.size
+          memberCount: projectMembers.size,
+          _status: getProjectStatus(project),
         };
       });
-      setMyProjects(updatedProjects);
-  
-
-      // Load tasks - using same approach as TeamDashboard
+      setProjects(updatedProjects);
+      // Load tasks
       let tasksData = [];
-      
-      // Get all tasks for the user's projects (simpler approach that matches TeamDashboard)
       if (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER')) {
-        tasksData = await taskAPI.search({});
-      } else if (projectsData.length > 0) {
+        tasksData = await taskAPI.search({}); // All tasks for all projects
+      } else if (projects.length > 0) {
         // For regular team members, get tasks for their active project
-        tasksData = await taskAPI.search({ projectId: projectsData[0].projectId });
+        tasksData = await taskAPI.search({ projectId: projects[0].projectId });
       }
-      
-      console.log('Tasks before filtering:', tasksData.length);
-      
-      // Filter to tasks assigned to the current user (same as TeamDashboard)
-      const userTasks = tasksData.filter((task: any) => {
-        if (!task.assignedUsers) return false;
-        return Object.keys(task.assignedUsers).includes(user.id.toString());
-      });
-      
-      console.log('Tasks assigned to current user:', userTasks.length);
-      
-      setTasks(userTasks);
+      // Normalize projectId for all tasks before filtering
+      const normalizedTasks = tasksData.map(task => ({
+        ...task,
+        projectId: String(task.projectId || (task.project && (task.project.projectId || task.project.id)) || ''),
+      }));
+      // For team members, filter to only assigned tasks
+      if (!(user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'))) {
+        setTasks(normalizedTasks.filter((task) => {
+          if (!task.assignedUsers) return false;
+          return Object.keys(task.assignedUsers).includes(user.id.toString());
+        }));
+      } else {
+        setTasks(normalizedTasks);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
       toast({
@@ -175,7 +188,7 @@ const TaskManagement = () => {
     console.log('Project filter:', projectFilter);
     console.log('Search query:', searchQuery);
     
-    // Start with all tasks
+    // Start with all normalized tasks
     let filtered = [...tasks];
 
     // Search filter: Use taskName and description
@@ -435,7 +448,7 @@ const TaskManagement = () => {
                   </SelectContent>
                 </Select>
 
-                {/* <Select value={projectFilter} onValueChange={setProjectFilter}>
+                <Select value={projectFilter} onValueChange={setProjectFilter}>
                   <SelectTrigger className="w-full md:w-40">
                     <SelectValue placeholder="All Projects" />
                   </SelectTrigger>
@@ -443,11 +456,11 @@ const TaskManagement = () => {
                     <SelectItem value="all">All Projects</SelectItem>
                     {projects.map((project) => (
                       <SelectItem key={project.projectId || project.id} value={project.projectId || project.id}>
-                        {project.name || project.title}
+                        {project.projectName || project.name || project.title}
                       </SelectItem>
                     ))}
                   </SelectContent>
-                </Select> */}
+                </Select>
               </div>
             </CardContent>
           </Card>

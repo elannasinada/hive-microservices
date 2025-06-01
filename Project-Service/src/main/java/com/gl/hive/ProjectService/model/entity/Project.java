@@ -6,6 +6,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import jakarta.persistence.Transient;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -38,6 +39,13 @@ public class Project {
     /* relationships */
     private Long leaderId;
     /* end of relationships */
+
+    @Transient
+    public boolean isActive() {
+        if (startDate == null || endDate == null) return false;
+        LocalDate today = LocalDate.now();
+        return (!today.isBefore(startDate)) && (!today.isAfter(endDate));
+    }
 
     public void incrementMemberCount() {
         this.memberCount++;
