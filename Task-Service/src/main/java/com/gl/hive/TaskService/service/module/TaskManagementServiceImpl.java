@@ -101,18 +101,10 @@ public class TaskManagementServiceImpl implements TaskManagementService {
         task.setCreatedAt(LocalDateTime.now());
         task.setTaskStatus(IN_PROGRESS);
 
-        TaskUser assignedUsers = buildAndSaveTaskUser(currentUserId, task);
-        task.getAssignedUsers().add(assignedUsers);
+        // Do NOT auto-assign the creator as a TaskUser
+        // Only assign users via the explicit assignment endpoint
 
         return taskRepository.save(task);
-    }
-
-    private TaskUser buildAndSaveTaskUser(long currentUserId, Task task) {
-        TaskUser taskUser = TaskUser.builder()
-                .userId(currentUserId)
-                .task(task)
-                .build();
-        return taskUserRepository.save(taskUser);
     }
 
 

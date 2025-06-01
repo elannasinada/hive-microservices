@@ -58,66 +58,68 @@ const Dashboard = () => {
                 });
 
             // Fetch tasks assigned to user
-            taskAPI.search({ assignedTo_UserId: user.id })
-                .then(tasks => {
-                    setMyTasks(tasks);
-                    const today = new Date().toISOString().slice(0, 10);
+            if (user && user.roles.includes('TEAM_MEMBER')) {
+                taskAPI.search({assignedTo_UserId: user.id})
+                    .then(tasks => {
+                        setMyTasks(tasks);
+                        const today = new Date().toISOString().slice(0, 10);
 
-                    // Helper function to check if task is overdue
-                    const isTaskOverdue = (task: any) => {
-                        if (!task.dueDate) return false;
-                        const isDueDate = new Date(task.dueDate) < new Date();
-                        const status = task.taskStatus?.toLowerCase() || '';
-                        const isNotCompleted = status !== 'completed' &&
-                            status !== 'complete' &&
-                            status !== 'completed_task';
-                        return isDueDate && isNotCompleted;
-                    };
+                        // Helper function to check if task is overdue
+                        const isTaskOverdue = (task: any) => {
+                            if (!task.dueDate) return false;
+                            const isDueDate = new Date(task.dueDate) < new Date();
+                            const status = task.taskStatus?.toLowerCase() || '';
+                            const isNotCompleted = status !== 'completed' &&
+                                status !== 'complete' &&
+                                status !== 'completed_task';
+                            return isDueDate && isNotCompleted;
+                        };
 
-                    // Helper function to check if task is cancelled
-                    const isTaskCancelled = (task: any) => {
-                        const status = task.taskStatus?.toLowerCase() || '';
-                        return status === 'cancelled';
-                    };
-
-
-                    // Filter overdue tasks
-                    setDueToday(tasks.filter(t => isTaskOverdue(t)));
-
-                    // Filter upcoming (in progress) tasks
-                    setUpcomingTasks(tasks.filter(t => {
-                        const status = t.taskStatus?.toLowerCase() || '';
-                        return (status === 'in_progress' ||
-                                status === 'inprogress' ||
-                                status === 'in-progress' ||
-                                status === 'progress') &&
-                            !isTaskOverdue(t);
-                    }));
-
-                    // Filter cancelled tasks
-                    setCancelledTasks(tasks.filter(t => isTaskCancelled(t => {
-                        const status = t.taskStatus?.toLowerCase() || '';
-                        return status === 'cancelled' ||
-                            status === 'canceled' ||
-                            status === 'cancelled_task';
-                    })));
+                        // Helper function to check if task is cancelled
+                        const isTaskCancelled = (task: any) => {
+                            const status = task.taskStatus?.toLowerCase() || '';
+                            return status === 'cancelled';
+                        };
 
 
-                    // Filter completed tasks
-                    setCompletedTasks(tasks.filter(t => {
-                        const status = t.taskStatus?.toLowerCase() || '';
-                        return status === 'completed' ||
-                            status === 'complete' ||
-                            status === 'completed_task';
-                    }));
-                })
-                .catch(err => {
-                    setMyTasks([]);
-                    // Only show toast for server errors, not 404s
-                    if (err.status !== 404) {
-                        toast({ title: "Error", description: "Could not fetch tasks", variant: "destructive" });
-                    }
-                });
+                        // Filter overdue tasks
+                        setDueToday(tasks.filter(t => isTaskOverdue(t)));
+
+                        // Filter upcoming (in progress) tasks
+                        setUpcomingTasks(tasks.filter(t => {
+                            const status = t.taskStatus?.toLowerCase() || '';
+                            return (status === 'in_progress' ||
+                                    status === 'inprogress' ||
+                                    status === 'in-progress' ||
+                                    status === 'progress') &&
+                                !isTaskOverdue(t);
+                        }));
+
+                        // Filter cancelled tasks
+                        setCancelledTasks(tasks.filter(t => isTaskCancelled(t => {
+                            const status = t.taskStatus?.toLowerCase() || '';
+                            return status === 'cancelled' ||
+                                status === 'canceled' ||
+                                status === 'cancelled_task';
+                        })));
+
+
+                        // Filter completed tasks
+                        setCompletedTasks(tasks.filter(t => {
+                            const status = t.taskStatus?.toLowerCase() || '';
+                            return status === 'completed' ||
+                                status === 'complete' ||
+                                status === 'completed_task';
+                        }));
+                    })
+                    .catch(err => {
+                        setMyTasks([]);
+                        // Only show toast for server errors, not 404s
+                        if (err.status !== 404) {
+                            toast({title: "Error", description: "Could not fetch tasks", variant: "destructive"});
+                        }
+                    });
+            }
             // Fetch completed projects
             projectAPI.getCompletedProjectsForUser(user.id)
                 .then(setHistory)

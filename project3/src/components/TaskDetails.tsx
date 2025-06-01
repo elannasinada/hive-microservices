@@ -24,9 +24,9 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
   const [taskData, setTaskData] = useState({
     title: task.taskName || task.title || '',
     description: task.description || '',
-    status: task.status || 'IN_PROGRESS',
-    priority: task.priority || 'MEDIUM',
-    dueDate: task.dueDate || ''
+    status: task.taskStatus || 'IN_PROGRESS',
+    priority: task.taskPriority || 'MEDIUM',
+    dueDate: task.endDate || ''
   });
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -288,28 +288,28 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({ task, onClose, onUpdate, canE
                 )}
 
                 {/* Quick Status Actions */}
-                {canEdit && !editingTask && (
-                  <div className="pt-4 border-t border-accent/20">
-                    <p className="text-sm font-medium mb-2">Quick Actions:</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button                        size="sm"
-                        variant="outline"
-                        onClick={() => handleStatusChange('in-progress')}
-                        className="border-blue-200 text-blue-600 hover:bg-blue-50"
-                      >
-                        Start Work
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleStatusChange('completed')}
-                        className="border-green-200 text-green-600 hover:bg-green-50"
-                      >
-                        Complete
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                {/*{canEdit && !editingTask && (*/}
+                {/*  <div className="pt-4 border-t border-accent/20">*/}
+                {/*    <p className="text-sm font-medium mb-2">Quick Actions:</p>*/}
+                {/*    <div className="flex flex-wrap gap-2">*/}
+                {/*      <Button                        size="sm"*/}
+                {/*        variant="outline"*/}
+                {/*        onClick={() => handleStatusChange('in-progress')}*/}
+                {/*        className="border-blue-200 text-blue-600 hover:bg-blue-50"*/}
+                {/*      >*/}
+                {/*        Start Work*/}
+                {/*      </Button>*/}
+                {/*      <Button*/}
+                {/*        size="sm"*/}
+                {/*        variant="outline"*/}
+                {/*        onClick={() => handleStatusChange('completed')}*/}
+                {/*        className="border-green-200 text-green-600 hover:bg-green-50"*/}
+                {/*      >*/}
+                {/*        Complete*/}
+                {/*      </Button>*/}
+                {/*    </div>*/}
+                {/*  </div>*/}
+                {/*)}*/}
               </CardContent>
             </Card>
           </div>

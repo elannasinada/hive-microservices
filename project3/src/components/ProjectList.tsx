@@ -16,35 +16,6 @@ interface ProjectListProps {
   onUpdate: () => void;
 }
 
-// Helper to format dates
-function formatDate(date: any) {
-  if (!date) return 'No date available';
-  try {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  } catch {
-    return date;
-  }
-}
-
-
-function calculateDuration(startDate, endDate) {
-  if (!startDate || !endDate) return "Unknown duration";
-  try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 +
-      (end.getMonth() - start.getMonth());
-    const roundedMonths = diffMonths + (end.getDate() >= start.getDate() ? 0 : -1) + 1;
-    return roundedMonths <= 0 ? "Less than a month" : `${roundedMonths} ${roundedMonths === 1 ? 'month' : 'months'}`;
-  } catch {
-    return "Unknown duration";
-  }
-}
-
 const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -74,6 +45,41 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
 
   // Check if user can manage tasks
   const canManageTasks = user && (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'));
+
+  const [taskStats, setTaskStats] = useState({
+    totalTasks: 0,
+    completedTasks: 0,
+    inProgressTasks: 0,
+    todoTasks: 0
+  });
+
+  // Move helper functions inside the component so they are in scope
+  function formatDate(date: any) {
+    if (!date) return 'No date available';
+    try {
+      return new Date(date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    } catch {
+      return date;
+    }
+  }
+
+  function calculateDuration(startDate, endDate) {
+    if (!startDate || !endDate) return "Unknown duration";
+    try {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 +
+        (end.getMonth() - start.getMonth());
+      const roundedMonths = diffMonths + (end.getDate() >= start.getDate() ? 0 : -1) + 1;
+      return roundedMonths <= 0 ? "Less than a month" : `${roundedMonths} ${roundedMonths === 1 ? 'month' : 'months'}`;
+    } catch {
+      return "Unknown duration";
+    }
+  }
 
   const handleSearch = async () => {
     setSearchLoading(true);
@@ -110,7 +116,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
             const tasks = await (window as any).taskAPI
               ? (window as any).taskAPI.search({ projectId })
               : (await import('@/utils/api')).taskAPI.search({ projectId });
-            tasksByProject[projectId] = tasks || [];
+            const uniqueTasks = Array.isArray(tasks)
+              ? Object.values(
+                  tasks.reduce((acc, t) => {
+                    acc[t.taskId] = t;
+                    return acc;
+                  }, {})
+                )
+              : [];
+            tasksByProject[projectId] = uniqueTasks;
           } catch {
             tasksByProject[projectId] = [];
           }
@@ -239,9 +253,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
     setShowTaskForm(false);
     setSelectedProjectForTask(null);
     onUpdate();
-    if (selectedProjectForTask) {
-      window.location.reload();
-    }
   };
 
   return (
@@ -279,9 +290,16 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
         {displayProjects.map((project: any) => {
           const projectId = project.id || project.projectId;
           const rawTasks = projectTasks[projectId];
-          const tasks = Array.isArray(rawTasks) ? rawTasks : [];
-          const totalTasks = tasks.length;
-          const completedTasks = tasks.filter((t: any) => t.status === 'completed').length;
+          const uniqueTasks = Array.isArray(rawTasks)
+            ? Object.values(
+                rawTasks.reduce((acc, t) => {
+                  acc[t.taskId] = t;
+                  return acc;
+                }, {})
+              )
+            : [];
+          const totalTasks = uniqueTasks.length;
+          const completedTasks = uniqueTasks.filter((t: any) => t.status === 'completed').length;
           const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
           let progressColor = 'bg-red-500';
           if (progress > 70) progressColor = 'bg-green-500';
@@ -340,13 +358,13 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                 <div className="grid grid-cols-3 gap-3 mb-4 p-3 bg-gray-50/50 rounded-lg">
                   <div className="text-center">
                     <div className="text-lg font-bold text-blue-600">
-                      {tasks.filter((t: any) => t.status === 'to_do').length}
+                      {uniqueTasks.filter((t: any) => t.status === 'to_do').length}
                     </div>
                     <div className="text-xs text-secondary/60">To Do</div>
                   </div>
                   <div className="text-center">
                     <div className="text-lg font-bold text-orange-600">
-                      {tasks.filter((t: any) => t.status === 'in_progress').length}
+                      {uniqueTasks.filter((t: any) => t.status === 'in_progress').length}
                     </div>
                     <div className="text-xs text-secondary/60">In Progress</div>
                   </div>
@@ -369,7 +387,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects, onUpdate }) => {
                   {memberCount} members
                   <span className="mx-2">•</span>
                   <ClipboardList className="w-4 h-4 mr-1"/>
-                  {totalTasks} task{totalTasks !== 1 ? 's' : ''} total
+                  {taskStats.totalTasks} task{totalTasks !== 1 ? 's' : ''} total
                 </div>
                 <div className="space-y-2">
                   {canManageMembers && (

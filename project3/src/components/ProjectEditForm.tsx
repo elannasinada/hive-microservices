@@ -83,22 +83,22 @@ const ProjectEditForm = ({ project, onClose, onSuccess }) => {
               <Input type="date" name="endDate" value={form.endDate} onChange={handleChange} />
             </div>
           </div>
-          <div>
-            <Label>Team Members (assigned or with a task)</Label>
-            <ul className="list-disc ml-5">
-              {filteredMembers.map(m => (
-                <li key={m.userId}>{m.username} ({m.email})</li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <Label>Tasks</Label>
-            <ul className="list-disc ml-5">
-              {tasks.map(t => (
-                <li key={t.taskId}>{t.taskName} (Assigned: {Object.keys(t.assignedUsers || {}).length})</li>
-              ))}
-            </ul>
-          </div>
+          {/*<div>*/}
+          {/*  <Label>Team Members (assigned or with a task)</Label>*/}
+          {/*  <ul className="list-disc ml-5">*/}
+          {/*    {filteredMembers.map(m => (*/}
+          {/*      <li key={m.userId}>{m.username} ({m.email})</li>*/}
+          {/*    ))}*/}
+          {/*  </ul>*/}
+          {/*</div>*/}
+          {/*<div>*/}
+          {/*  <Label>Tasks</Label>*/}
+          {/*  <ul className="list-disc ml-5">*/}
+          {/*    {tasks.map(t => (*/}
+          {/*      <li key={t.taskId}>{t.taskName} (Assigned: {Object.keys(t.assignedUsers || {}).length})</li>*/}
+          {/*    ))}*/}
+          {/*  </ul>*/}
+          {/*</div>*/}
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button onClick={handleSave} disabled={loading} className="bg-primary text-white">{loading ? 'Saving...' : 'Save'}</Button>

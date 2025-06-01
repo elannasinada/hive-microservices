@@ -16,6 +16,12 @@ interface TaskListProps {
 }
 
 const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
+  const [taskStats, setTaskStats] = useState({
+    totalTasks: 0,
+    completedTasks: 0,
+    inProgressTasks: 0,
+    todoTasks: 0
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [editingTask, setEditingTask] = useState(null);
   const [viewingTask, setViewingTask] = useState(null);
@@ -91,23 +97,13 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
     }
   };
 
-  const handleDeleteTask = async (projectId: string, taskId: string) => {
-    if (!confirm('Are you sure you want to delete this task?')) return;
-
+  const handleCancelTask = async (taskId: string) => {
     try {
-      await taskAPI.delete(projectId, taskId);
-      toast({
-        title: "Success!",
-        description: "Task deleted successfully."
-      });
+      await taskAPI.update(taskId, { taskStatus: 'CANCELLED' });
+      toast({ title: 'Task Cancelled', description: 'The task has been marked as cancelled.' });
       onUpdate();
     } catch (error) {
-      console.error('Delete failed:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete task",
-        variant: "destructive"
-      });
+      toast({ title: 'Error', description: 'Failed to cancel task', variant: 'destructive' });
     }
   };
 
@@ -148,7 +144,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
   };
 
   const filteredTasks = tasks.filter(task =>
-    task.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    task.taskName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     task.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -205,7 +201,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
             <CardHeader>
               <div className="flex justify-between items-start">
                 <CardTitle className="text-primary text-lg group-hover:text-secondary transition-colors">
-                  {task.title}
+                  {task.taskName}
                 </CardTitle>
                 <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
                   <Button
@@ -229,25 +225,25 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
                         <Edit className="w-4 h-4" />
                       </Button>
                       <Button
-                        variant="ghost"
+                        onClick={() => handleCancelTask(task.id)}
+                        variant="destructive"
                         size="sm"
-                        onClick={() => handleDeleteTask(task.projectId, task.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Delete Task"
                       >
-                        <Trash className="w-4 h-4" />
+                        Cancel Task
                       </Button>
                     </>
                   )}
                 </div>
               </div>
               <div className="flex space-x-2">
-                <Badge className={getPriorityColor(task.priority)}>
-                  {task.priority}
+                <Badge className={getPriorityColor(task.taskPriority)}>
+                  {task.taskPriority === 'HIGH' ? 'High' :
+                      task.taskPriority === 'MEDIUM' ? 'Medium' :
+                          task.taskPriority === 'LOW' ? 'Low' : 'Not Set'}
                 </Badge>                <Badge className={isTaskOverdue(task) 
                   ? 'bg-red-100 text-red-800 border-red-200' 
                   : getStatusColor(task.status)}>
-                  {isTaskOverdue(task) ? 'Overdue' : task.status?.replace('-', ' ')}
+                  {isTaskOverdue(task) ? 'Overdue' : task.taskStatus?.replace('_-', ' ')}
                 </Badge>
               </div>
             </CardHeader>
@@ -272,39 +268,39 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdate, user }) => {
                 )}
               </div>
               
-              <div className="mt-4 pt-4 border-t border-accent/20 space-y-2" onClick={(e) => e.stopPropagation()}>
-                {canManageTasks && (
-                  <>
-                    <div className="flex space-x-1">
-                      <Button
-                        onClick={() => handleUpdateProgress(task.id, task.projectId, 'in-progress')}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-xs border-blue-200 text-blue-600 hover:bg-blue-50"
-                      >
-                        Start
-                      </Button>
-                      <Button
-                        onClick={() => handleUpdateProgress(task.id, task.projectId, 'completed')}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-xs border-green-200 text-green-600 hover:bg-green-50"
-                      >
-                        Complete
-                      </Button>
-                    </div>
-                    <Button
-                      onClick={() => handleAssignTask({ taskId: task.id, userId: 'current-user' })}
-                      variant="outline"
-                      size="sm"
-                      className="w-full border-primary text-primary hover:bg-primary hover:text-white"
-                    >
-                      <Users className="w-4 h-4 mr-2" />
-                      Assign to Me
-                    </Button>
-                  </>
-                )}
-              </div>
+              {/*<div className="mt-4 pt-4 border-t border-accent/20 space-y-2" onClick={(e) => e.stopPropagation()}>*/}
+              {/*  {canManageTasks && (*/}
+              {/*    <>*/}
+              {/*      <div className="flex space-x-1">*/}
+              {/*        <Button*/}
+              {/*          onClick={() => handleUpdateProgress(task.id, task.projectId, 'in-progress')}*/}
+              {/*          variant="outline"*/}
+              {/*          size="sm"*/}
+              {/*          className="flex-1 text-xs border-blue-200 text-blue-600 hover:bg-blue-50"*/}
+              {/*        >*/}
+              {/*          Start*/}
+              {/*        </Button>*/}
+              {/*        <Button*/}
+              {/*          onClick={() => handleUpdateProgress(task.id, task.projectId, 'completed')}*/}
+              {/*          variant="outline"*/}
+              {/*          size="sm"*/}
+              {/*          className="flex-1 text-xs border-green-200 text-green-600 hover:bg-green-50"*/}
+              {/*        >*/}
+              {/*          Complete*/}
+              {/*        </Button>*/}
+              {/*      </div>*/}
+              {/*      <Button*/}
+              {/*        onClick={() => handleAssignTask({ taskId: task.id, userId: 'current-user' })}*/}
+              {/*        variant="outline"*/}
+              {/*        size="sm"*/}
+              {/*        className="w-full border-primary text-primary hover:bg-primary hover:text-white"*/}
+              {/*      >*/}
+              {/*        <Users className="w-4 h-4 mr-2" />*/}
+              {/*        Assign to Me*/}
+              {/*      </Button>*/}
+              {/*    </>*/}
+              {/*  )}*/}
+              {/*</div>*/}
             </CardContent>
           </Card>
         ))}

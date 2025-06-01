@@ -30,6 +30,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
   const [loading, setLoading] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
+  const [originalAssignedUser, setOriginalAssignedUser] = useState<string>('');
 
   // Check if user is a leader or admin
   const canAssignUsers = user && (user.roles.includes('ADMIN') || user.roles.includes('PROJECT_LEADER'));
@@ -39,6 +40,26 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
       fetchProjectUsers();
     }
   }, [canAssignUsers]);
+
+  useEffect(() => {
+    if (taskToEdit && canAssignUsers) {
+      // Fetch the current assigned user for the task
+      (async () => {
+        const taskDetails = await taskAPI.get(taskToEdit.id || taskToEdit.taskId);
+        // Assume assignedUsers is a map or array; get the first userId
+        let assignedUserId = '';
+        if (taskDetails && taskDetails.assignedUsers) {
+          if (Array.isArray(taskDetails.assignedUsers)) {
+            assignedUserId = String(taskDetails.assignedUsers[0]?.userId || '');
+          } else if (typeof taskDetails.assignedUsers === 'object') {
+            assignedUserId = Object.keys(taskDetails.assignedUsers)[0] || '';
+          }
+        }
+        setSelectedUser(assignedUserId);
+        setOriginalAssignedUser(assignedUserId);
+      })();
+    }
+  }, [taskToEdit, canAssignUsers]);
 
   const fetchProjectUsers = async () => {
     try {
@@ -108,9 +129,26 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
                      formData.status === 'in_progress' ? 'IN_PROGRESS' : 
                      formData.status === 'completed' ? 'COMPLETED' : 
                      formData.status.toUpperCase(),
-          dueDate: formData.dueDate || null
+          dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : null
         };
         await taskAPI.update(taskToEdit.id, updatePayload);
+        // Assignment logic for editing
+        if (canAssignUsers && selectedUser && selectedUser !== originalAssignedUser) {
+          // Unassign previous user if any
+          if (originalAssignedUser) {
+            await taskAPI.unassign({
+              taskId: taskToEdit.id || taskToEdit.taskId,
+              projectId: formData.projectId,
+              userIdList: [Number(originalAssignedUser)]
+            });
+          }
+          // Assign new user
+          await taskAPI.assignToUsers({
+            taskId: Number(taskToEdit.id || taskToEdit.taskId),
+            projectId: Number(formData.projectId),
+            userIdList: [Number(selectedUser)]
+          });
+        }
         toast({
           title: "Success!",
           description: "Task updated successfully."
@@ -124,22 +162,23 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
                      formData.status === 'in_progress' ? 'IN_PROGRESS' : 
                      formData.status === 'completed' ? 'COMPLETED' : 
                      formData.status.toUpperCase(),
-          dueDate: formData.dueDate || null
+          dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : null
         };
         const newTask = await taskAPI.create(formData.projectId, createPayload);
-          // Assign task to selected user if any
+        // Only assign to the selected user if one is chosen (and not the project leader by default)
         if (selectedUser && canAssignUsers) {
           try {
             await taskAPI.assignToUsers({
-              taskId: newTask.id || newTask.taskId,
-              userIds: [selectedUser]
+              taskId: Number(newTask.id || newTask.taskId),
+              projectId: Number(formData.projectId),
+              userIdList: [Number(selectedUser)]
             });
           } catch (assignError) {
             console.error('Failed to assign task:', assignError);
             // Still show success for task creation
           }
         }
-        
+        // No assignment if no user is selected; do not assign to project leader
         toast({
           title: "Success!",
           description: "Task created successfully."
@@ -167,6 +206,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
   const handleUserSelection = (userId: string) => {
     setSelectedUser(userId);
   };
+
+  // In the due date input, restrict min/max to project start/end date if available
+  const project = projects && projects.length === 1 ? projects[0] : null;
+  const minDueDate = project && project.startDate ? project.startDate : undefined;
+  const maxDueDate = project && project.endDate ? project.endDate : undefined;
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -263,6 +307,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ onClose, onSuccess, projects, taskT
               value={formData.dueDate}
               onChange={handleChange}
               className="border-accent/30 focus:border-primary"
+              min={minDueDate}
+              max={maxDueDate}
             />
           </div>          {/* User Assignment Section */}
           {canAssignUsers && !taskToEdit && availableUsers.length > 0 && (
